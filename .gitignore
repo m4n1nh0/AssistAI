@@ -1,0 +1,17 @@
+.env
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+node_modules/
+.DS_Store
+*.log
+*.sqlite3
+coverage/
+frontend/.vite/
+

@@ -1,0 +1,2 @@
+"""AssistAI backend package."""
+
