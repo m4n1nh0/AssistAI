@@ -1,8 +1,9 @@
 import re
+from datetime import datetime
 from time import perf_counter
 
 from app.core.config import Settings
-from app.domain.contracts import AskRequest, AskResponse, SourceResponse
+from app.domain.contracts import AskRequest, AskResponse, ResponseMetadata, SourceResponse
 from app.domain.enums import Intent
 from app.domain.models import AiLog, MessageRecord, Source, new_id
 from app.infrastructure.llm.fake_llm import FakeLLMGateway
@@ -28,7 +29,7 @@ class AssistantService:
 
     def ask(self, request: AskRequest) -> AskResponse:
         started = perf_counter()
-        message = _sanitize(request.message, max_chars=self.settings.max_message_chars)
+        message = _sanitize(request.question, max_chars=self.settings.max_message_chars)
         intent = _classify_intent(message)
 
         user = self.repository.find_or_create_user(request.user_id, request.channel)
@@ -97,22 +98,37 @@ class AssistantService:
             )
         )
 
+        model_used = "fallback" if fallback else (
+            "simulated_tool" if intent == Intent.TICKET_STATUS else "gpt-4"
+        )
+        fallback_reason = None
+        if intent == Intent.HUMAN_REQUEST:
+            fallback_reason = "intent_out_of_scope"
+        elif fallback:
+            fallback_reason = "no_sources"
+
         return AskResponse(
             answer=answer,
-            fallback=fallback,
-            intent=intent,
-            confidence=round(confidence, 4),
             sources=[
                 SourceResponse(
                     document_id=source.document_id,
                     title=source.title,
+                    content=source.content,
                     version=source.version,
                     score=source.score,
                 )
                 for source in sources
             ],
-            attendance_id=attendance.id,
-            message_id=message_record.id,
+            score=round(confidence, 4),
+            fallback=fallback,
+            fallback_reason=fallback_reason,
+            conversation_id=request.conversation_id,
+            request_id=request.request_id,
+            metadata=ResponseMetadata(
+                processing_time_ms=elapsed_ms,
+                model_used=model_used,
+                timestamp=datetime.utcnow(),
+            ),
         )
 
     def _answer_ticket_status(self, message: str) -> tuple[str, float]:
@@ -169,6 +185,7 @@ def _to_sources(
                 title=document.title,
                 version=document.version,
                 score=context.score,
+                content=context.chunk.content,
             )
         )
     return sources

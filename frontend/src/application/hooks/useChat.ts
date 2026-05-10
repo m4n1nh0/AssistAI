@@ -33,21 +33,30 @@ export function useChat() {
     setError(null);
 
     try {
-      const response = await apiClient.ask({
+      const request = {
+        version: "1.0",
+        question: trimmed,
         user_id: USER_ID,
         channel: "web",
-        message: trimmed
-      });
+        metadata: {
+          timestamp: new Date().toISOString(),
+          user_agent: navigator.userAgent,
+        },
+      };
+
+      const response = await apiClient.ask(request);
+      const assistantId = response.request_id ?? crypto.randomUUID();
 
       setMessages((current) => [
         ...current,
         {
-          id: response.message_id,
+          id: assistantId,
           role: "assistant",
           content: response.answer,
           fallback: response.fallback,
           sources: response.sources,
-          messageId: response.message_id
+          messageId: assistantId,
+          timestamp: new Date().toISOString(),
         }
       ]);
     } catch {

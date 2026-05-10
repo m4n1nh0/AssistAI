@@ -19,6 +19,7 @@ class Source:
     title: str
     version: str
     score: float
+    content: str
 
 
 @dataclass(slots=True)
