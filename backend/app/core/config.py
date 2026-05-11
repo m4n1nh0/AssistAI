@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     qdrant_collection: str = "assistai_knowledge"
     llm_provider: str = "mock"
     llm_api_key: str | None = None
+    use_real_database: bool = False
+    use_real_vector_store: bool = False
     telegram_bot_token: str | None = None
     min_relevance_score: float = 0.15
     max_message_chars: int = 2000

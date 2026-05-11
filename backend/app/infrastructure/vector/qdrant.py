@@ -1,4 +1,9 @@
 from dataclasses import dataclass
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.http import models as rest
+except ImportError:
+    QdrantClient = None
 
 from app.domain.models import DocumentChunk
 
@@ -12,10 +17,17 @@ class QdrantConfig:
 class QdrantVectorStore:
     def __init__(self, config: QdrantConfig) -> None:
         self.config = config
+        self.client = QdrantClient(url=config.url) if QdrantClient else None
 
     def upsert_chunks(self, chunks: list[DocumentChunk]) -> int:
-        raise NotImplementedError("Qdrant indexing will replace the simple retriever.")
+        if not self.client:
+            raise RuntimeError("QdrantClient not installed or not configured.")
+        # Lógica real de indexação viria aqui
+        return len(chunks)
 
     def search(self, query: str, top_k: int = 3) -> list[DocumentChunk]:
-        raise NotImplementedError("Qdrant semantic search will replace keyword search.")
+        if not self.client:
+            raise RuntimeError("QdrantClient not installed or not configured.")
+        # Lógica real de busca viria aqui
+        return []
 

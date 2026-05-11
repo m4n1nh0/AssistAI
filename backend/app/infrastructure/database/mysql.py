@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from sqlalchemy.orm import Session
+from app.infrastructure.database.session import SessionLocal
 
 
 @dataclass(frozen=True, slots=True)
@@ -9,10 +11,17 @@ class MySqlConfig:
 class MySqlUnitOfWork:
     def __init__(self, config: MySqlConfig) -> None:
         self.config = config
+        self.session: Session | None = None
 
     def __enter__(self) -> "MySqlUnitOfWork":
-        raise NotImplementedError("MySQL persistence will replace the in-memory adapter.")
+        self.session = SessionLocal()
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
-        return None
+        if self.session:
+            if exc_type:
+                self.session.rollback()
+            else:
+                self.session.commit()
+            self.session.close()
 
