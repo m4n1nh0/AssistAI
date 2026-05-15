@@ -11,7 +11,7 @@ FeedbackServiceDep = Annotated[FeedbackService, Depends(get_feedback_service)]
 
 
 @router.post("/feedback", response_model=FeedbackResponse)
-def register_feedback(
+async def register_feedback(
     payload: FeedbackRequest,
     service: FeedbackServiceDep,
 ) -> FeedbackResponse:

@@ -1,31 +1,50 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from app.domain.enums import Channel, DocumentStatus, Intent
+
+ASSISTANT_CONTRACT_VERSION = "assistant.ask.v1"
+
+
+class RequestContext(BaseModel):
+    conversation_id: str | None = Field(default=None, max_length=128)
+    external_message_id: str | None = Field(default=None, max_length=128)
+    locale: str = Field(default="pt-BR", min_length=2, max_length=16)
+    metadata: dict[str, str] = Field(default_factory=dict)
 
 
 class SourceResponse(BaseModel):
     document_id: str
     title: str
     version: str
-    score: float
+    score: float = Field(..., ge=0, le=1)
 
 
 class AskRequest(BaseModel):
+    schema_version: Literal["assistant.ask.v1"] = ASSISTANT_CONTRACT_VERSION
+    request_id: str | None = Field(default=None, max_length=128)
     user_id: str = Field(..., min_length=1, max_length=128)
     channel: Channel = Channel.WEB
     message: str = Field(..., min_length=1, max_length=2000)
+    context: RequestContext = Field(default_factory=RequestContext)
 
 
 class AskResponse(BaseModel):
+    schema_version: Literal["assistant.ask.v1"] = ASSISTANT_CONTRACT_VERSION
+    request_id: str | None = Field(default=None, max_length=128)
+    user_id: str
+    channel: Channel
     answer: str
     fallback: bool
+    handoff_required: bool
     intent: Intent
-    confidence: float
+    confidence: float = Field(..., ge=0, le=1)
     sources: list[SourceResponse]
     attendance_id: str
     message_id: str
+    generated_at: datetime
 
 
 class FeedbackRequest(BaseModel):
@@ -114,6 +133,7 @@ class MetricSummaryResponse(BaseModel):
 
 
 class TelegramWebhookRequest(BaseModel):
+    request_id: str | None = Field(default=None, max_length=128)
     user_id: str = Field(..., min_length=1, max_length=128)
     message: str = Field(..., min_length=1, max_length=2000)
-
+    context: RequestContext = Field(default_factory=RequestContext)

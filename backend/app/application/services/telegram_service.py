@@ -10,9 +10,10 @@ class TelegramService:
     def handle_webhook(self, payload: TelegramWebhookRequest) -> AskResponse:
         return self.assistant_service.ask(
             AskRequest(
+                request_id=payload.request_id,
                 user_id=payload.user_id,
                 channel=Channel.TELEGRAM,
                 message=payload.message,
+                context=payload.context,
             )
         )
-

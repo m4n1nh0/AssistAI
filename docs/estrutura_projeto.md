@@ -7,6 +7,7 @@ AssistAI/
   infra/                   Scripts e configuracoes de infraestrutura local
   knowledge_base/          Conteudos iniciais para validacao do RAG
   docs/                    Documentacao de arquitetura, backlog e apoio ao time
+  contrato_assistente.md Contrato oficial de pergunta/resposta do assistente
   docker-compose.yml       MySQL, Qdrant, backend e frontend locais
 ```
 
@@ -17,4 +18,3 @@ AssistAI/
 - Frontend separado em presentation, application, domain, infrastructure e shared.
 - Dependencias externas iniciam como adaptadores substituiveis.
 - Fluxo principal demonstravel desde a primeira semana: pergunta, busca, resposta, historico e feedback.
-

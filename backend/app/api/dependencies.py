@@ -8,26 +8,25 @@ from app.application.services.telegram_service import TelegramService
 from app.infrastructure.repositories.memory import InMemoryRepository
 
 
-def get_repository(request: Request) -> InMemoryRepository:
+async def get_repository(request: Request) -> InMemoryRepository:
     return request.app.state.repository
 
 
-def get_assistant_service(request: Request) -> AssistantService:
+async def get_assistant_service(request: Request) -> AssistantService:
     return request.app.state.assistant_service
 
 
-def get_document_service(request: Request) -> DocumentService:
+async def get_document_service(request: Request) -> DocumentService:
     return request.app.state.document_service
 
 
-def get_feedback_service(request: Request) -> FeedbackService:
+async def get_feedback_service(request: Request) -> FeedbackService:
     return request.app.state.feedback_service
 
 
-def get_metrics_service(request: Request) -> MetricsService:
+async def get_metrics_service(request: Request) -> MetricsService:
     return request.app.state.metrics_service
 
 
-def get_telegram_service(request: Request) -> TelegramService:
+async def get_telegram_service(request: Request) -> TelegramService:
     return request.app.state.telegram_service
-

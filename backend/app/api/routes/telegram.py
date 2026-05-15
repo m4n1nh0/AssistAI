@@ -11,7 +11,7 @@ TelegramServiceDep = Annotated[TelegramService, Depends(get_telegram_service)]
 
 
 @router.post("/telegram/webhook", response_model=AskResponse)
-def telegram_webhook(
+async def telegram_webhook(
     payload: TelegramWebhookRequest,
     service: TelegramServiceDep,
 ) -> AskResponse:

@@ -15,14 +15,14 @@ DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
 
 
 @router.get("/documents", response_model=list[DocumentResponse])
-def list_documents(
+async def list_documents(
     service: DocumentServiceDep,
 ) -> list[DocumentResponse]:
     return service.list()
 
 
 @router.post("/documents", response_model=DocumentResponse, status_code=201)
-def create_document(
+async def create_document(
     payload: DocumentCreateRequest,
     service: DocumentServiceDep,
 ) -> DocumentResponse:
@@ -30,7 +30,7 @@ def create_document(
 
 
 @router.post("/documents/reindex", response_model=ReindexResponse)
-def reindex_documents(
+async def reindex_documents(
     service: DocumentServiceDep,
 ) -> ReindexResponse:
     return service.reindex()

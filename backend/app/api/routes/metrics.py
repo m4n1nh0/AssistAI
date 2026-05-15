@@ -11,7 +11,7 @@ MetricsServiceDep = Annotated[MetricsService, Depends(get_metrics_service)]
 
 
 @router.get("/metrics", response_model=MetricSummaryResponse)
-def metrics(
+async def metrics(
     service: MetricsServiceDep,
 ) -> MetricSummaryResponse:
     return service.summary()

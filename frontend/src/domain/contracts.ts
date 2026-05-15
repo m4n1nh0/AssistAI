@@ -1,5 +1,9 @@
 export type Channel = "web" | "telegram";
 
+export const ASSISTANT_CONTRACT_VERSION = "assistant.ask.v1" as const;
+
+export type AssistantContractVersion = typeof ASSISTANT_CONTRACT_VERSION;
+
 export type Intent =
   | "saudacao"
   | "procedimento"
@@ -15,20 +19,36 @@ export interface Source {
   score: number;
 }
 
+export interface RequestContext {
+  conversation_id?: string | null;
+  external_message_id?: string | null;
+  locale: string;
+  metadata: Record<string, string>;
+}
+
 export interface AskRequest {
+  schema_version?: AssistantContractVersion;
+  request_id?: string | null;
   user_id: string;
   channel: Channel;
   message: string;
+  context?: RequestContext;
 }
 
 export interface AskResponse {
+  schema_version: AssistantContractVersion;
+  request_id?: string | null;
+  user_id: string;
+  channel: Channel;
   answer: string;
   fallback: boolean;
+  handoff_required: boolean;
   intent: Intent;
   confidence: number;
   sources: Source[];
   attendance_id: string;
   message_id: string;
+  generated_at: string;
 }
 
 export interface FeedbackRequest {
@@ -79,4 +99,3 @@ export interface ChatMessage {
   fallback?: boolean;
   messageId?: string;
 }
-

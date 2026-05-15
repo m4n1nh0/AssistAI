@@ -4,7 +4,7 @@ from time import perf_counter
 from app.core.config import Settings
 from app.domain.contracts import AskRequest, AskResponse, SourceResponse
 from app.domain.enums import Intent
-from app.domain.models import AiLog, MessageRecord, Source, new_id
+from app.domain.models import AiLog, MessageRecord, Source, new_id, utc_now
 from app.infrastructure.llm.fake_llm import FakeLLMGateway
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
 from app.infrastructure.rag.simple_retriever import RetrievalResult, SimpleRetriever
@@ -98,8 +98,12 @@ class AssistantService:
         )
 
         return AskResponse(
+            request_id=request.request_id,
+            user_id=request.user_id,
+            channel=request.channel,
             answer=answer,
             fallback=fallback,
+            handoff_required=attendance.escalated,
             intent=intent,
             confidence=round(confidence, 4),
             sources=[
@@ -113,6 +117,7 @@ class AssistantService:
             ],
             attendance_id=attendance.id,
             message_id=message_record.id,
+            generated_at=utc_now(),
         )
 
     def _answer_ticket_status(self, message: str) -> tuple[str, float]:

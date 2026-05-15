@@ -16,7 +16,7 @@ RepositoryDep = Annotated[InMemoryRepository, Depends(get_repository)]
 
 
 @router.get("/attendances", response_model=list[AttendanceListItem])
-def list_attendances(
+async def list_attendances(
     repository: RepositoryDep,
 ) -> list[AttendanceListItem]:
     message_counts = repository.count_messages_by_attendance()
@@ -34,7 +34,7 @@ def list_attendances(
 
 
 @router.get("/attendances/{attendance_id}", response_model=AttendanceDetailResponse)
-def get_attendance(
+async def get_attendance(
     attendance_id: str,
     repository: RepositoryDep,
 ) -> AttendanceDetailResponse:

@@ -11,7 +11,7 @@ AssistantServiceDep = Annotated[AssistantService, Depends(get_assistant_service)
 
 
 @router.post("/ask", response_model=AskResponse)
-def ask(
+async def ask(
     payload: AskRequest,
     service: AssistantServiceDep,
 ) -> AskResponse:
