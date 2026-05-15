@@ -1,19 +1,22 @@
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from uuid import uuid4
-
-from app.domain.enums import Channel, DocumentStatus, Intent
+from datetime import datetime, timezone
+from enum import StrEnum
 
 
-def new_id(prefix: str) -> str:
-    return f"{prefix}-{uuid4().hex[:12]}"
+class Channel(StrEnum):
+    WEB = "web"
+    TELEGRAM = "telegram"
 
 
-def utc_now() -> datetime:
-    return datetime.now(UTC)
+class Intent(StrEnum):
+    GREETING = "saudacao"
+    PROCEDURE = "procedimento"
+    TICKET_STATUS = "consulta_chamado"
+    HUMAN = "solicitacao_humano"
+    OUT_OF_SCOPE = "fora_de_escopo"
 
 
-@dataclass(slots=True)
+@dataclass
 class Source:
     document_id: str
     title: str
@@ -21,97 +24,36 @@ class Source:
     score: float
 
 
-@dataclass(slots=True)
-class User:
+@dataclass
+class MessageRecord:
     id: str
-    external_id: str
-    channel: Channel
-    created_at: datetime = field(default_factory=utc_now)
+    role: str
+    content: str
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    sources: list[Source] = field(default_factory=list)
+    fallback: bool = False
+    intent: Intent | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class Attendance:
     id: str
     user_id: str
     channel: Channel
-    started_at: datetime = field(default_factory=utc_now)
-    escalated: bool = False
+    messages: list[MessageRecord] = field(default_factory=list)
+    needs_human: bool = False
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-@dataclass(slots=True)
-class MessageRecord:
-    id: str
-    attendance_id: str
-    user_message: str
-    assistant_answer: str
-    fallback: bool
-    intent: Intent
-    confidence: float
-    sources: list[Source]
-    created_at: datetime = field(default_factory=utc_now)
-
-
-@dataclass(slots=True)
-class Feedback:
-    id: str
-    message_id: str
-    useful: bool
-    comment: str | None = None
-    created_at: datetime = field(default_factory=utc_now)
-
-
-@dataclass(slots=True)
+@dataclass
 class KnowledgeDocument:
     id: str
     title: str
     category: str
-    channel: str
-    version: str
-    status: DocumentStatus
-    updated_at: datetime
-    source: str
-    owner: str
-    sensitivity: str
     content: str
-    tags: list[str]
-
-
-@dataclass(slots=True)
-class DocumentChunk:
-    id: str
-    document_id: str
-    content: str
-    metadata: dict[str, str]
-    indexed_at: datetime = field(default_factory=utc_now)
-
-
-@dataclass(slots=True)
-class AiLog:
-    id: str
-    message_id: str
-    intent: Intent
-    relevance_score: float
-    fallback: bool
-    source_document_ids: list[str]
-    elapsed_ms: int
-    created_at: datetime = field(default_factory=utc_now)
-
-
-@dataclass(slots=True)
-class Handoff:
-    id: str
-    attendance_id: str
-    reason: str
-    created_at: datetime = field(default_factory=utc_now)
-
-
-@dataclass(slots=True)
-class ToolCall:
-    id: str
-    message_id: str
-    tool_name: str
-    input_payload: dict[str, str]
-    output_payload: dict[str, str]
-    success: bool
-    created_at: datetime = field(default_factory=utc_now)
-
+    version: str = "1.0"
+    status: str = "active"
+    channel: str = "both"
+    sensitivity: str = "internal"
+    tags: list[str] = field(default_factory=list)
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
