@@ -4,7 +4,8 @@ import type {
   AttendanceListItem,
   DocumentSummary,
   FeedbackRequest,
-  MetricSummary
+  MetricSummary,
+  ReadinessResponse
 } from "../../domain/contracts";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -46,6 +47,8 @@ export const apiClient = {
   },
   metrics() {
     return request<MetricSummary>("/metrics");
+  },
+  readiness() {
+    return request<ReadinessResponse>("/health/ready");
   }
 };
-

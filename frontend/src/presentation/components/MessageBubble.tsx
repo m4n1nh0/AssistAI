@@ -3,15 +3,17 @@ import { FeedbackButtons } from "./FeedbackButtons";
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  feedback?: boolean;
   onFeedback: (messageId: string, useful: boolean) => Promise<void>;
 }
 
-export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
+export function MessageBubble({ message, feedback, onFeedback }: MessageBubbleProps) {
   const isAssistant = message.role === "assistant";
 
   return (
     <article className={isAssistant ? "message assistant" : "message user"}>
       <p>{message.content}</p>
+      {message.fallback && <span className="message-badge">Escalonamento sugerido</span>}
       {message.sources && message.sources.length > 0 && (
         <div className="source-list">
           {message.sources.map((source) => (
@@ -22,9 +24,8 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
         </div>
       )}
       {isAssistant && message.messageId && (
-        <FeedbackButtons messageId={message.messageId} onFeedback={onFeedback} />
+        <FeedbackButtons messageId={message.messageId} selected={feedback} onFeedback={onFeedback} />
       )}
     </article>
   );
 }
-

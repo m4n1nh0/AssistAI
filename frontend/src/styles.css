@@ -113,6 +113,27 @@ input {
   color: #606a78;
 }
 
+.api-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  max-width: 360px;
+  padding: 0 12px;
+  border: 1px solid #bddbd2;
+  border-radius: 8px;
+  background: #edf9f5;
+  color: #155e4d;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.api-status.offline {
+  border-color: #f2c6c2;
+  background: #fff3f1;
+  color: #9f261d;
+}
+
 .chat-workspace {
   max-width: 920px;
 }
@@ -139,6 +160,17 @@ input {
 
 .message p {
   margin: 0;
+}
+
+.message-badge {
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #fff2cc;
+  color: #7a4d00;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .message.assistant {
@@ -187,6 +219,11 @@ input {
   cursor: pointer;
 }
 
+.icon-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .icon-button.selected,
 .icon-button:hover,
 .composer button:hover {
@@ -194,9 +231,35 @@ input {
   color: #0f777b;
 }
 
+.suggestion-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestion-row button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #ccd3dc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.suggestion-row button:hover {
+  border-color: #20a4a9;
+  color: #0f777b;
+}
+
+.suggestion-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   gap: 10px;
 }
 
@@ -215,6 +278,12 @@ input {
   background: #20a4a9;
   color: #ffffff;
   border-color: #20a4a9;
+}
+
+.composer .composer-secondary {
+  background: #ffffff;
+  color: #253041;
+  border-color: #ccd3dc;
 }
 
 .composer button:disabled {
@@ -341,8 +410,23 @@ input {
     padding: 18px;
   }
 
+  .workspace-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .api-status {
+    width: 100%;
+    max-width: none;
+    white-space: normal;
+  }
+
   .message {
     max-width: 100%;
+  }
+
+  .suggestion-row {
+    display: grid;
   }
 
   .table-row {
@@ -350,4 +434,3 @@ input {
     font-size: 13px;
   }
 }
-

@@ -2,19 +2,20 @@ import { useMemo, useState } from "react";
 
 import type { ChatMessage } from "../../domain/contracts";
 import { apiClient } from "../../infrastructure/api/client";
+import { createRequestId, getWebSession } from "../session/webSession";
 
-const USER_ID = "web-user-001";
+const WELCOME_MESSAGE: ChatMessage = {
+  id: "welcome",
+  role: "assistant",
+  content: "Ola. Posso ajudar com abertura de chamado, reset de senha ou status de atendimento."
+};
 
 export function useChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "Ola. Posso ajudar com abertura de chamado, reset de senha ou status de atendimento."
-    }
-  ]);
+  const [session] = useState(() => getWebSession());
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, boolean>>({});
 
   async function sendMessage(content: string) {
     const trimmed = content.trim();
@@ -34,9 +35,18 @@ export function useChat() {
 
     try {
       const response = await apiClient.ask({
-        user_id: USER_ID,
+        schema_version: "assistant.ask.v1",
+        request_id: createRequestId(),
+        user_id: session.userId,
         channel: "web",
-        message: trimmed
+        message: trimmed,
+        context: {
+          conversation_id: session.conversationId,
+          locale: "pt-BR",
+          metadata: {
+            origin: "web-chat"
+          }
+        }
       });
 
       setMessages((current) => [
@@ -50,8 +60,11 @@ export function useChat() {
           messageId: response.message_id
         }
       ]);
-    } catch {
-      setError("Nao foi possivel falar com a API agora.");
+    } catch (unknownError) {
+      const message = unknownError instanceof Error ? unknownError.message : "";
+      setError(
+        message ? `Nao foi possivel falar com a API agora. ${message}` : "Nao foi possivel falar com a API agora."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -59,17 +72,26 @@ export function useChat() {
 
   async function sendFeedback(messageId: string, useful: boolean) {
     await apiClient.sendFeedback({ message_id: messageId, useful });
+    setFeedbackByMessage((current) => ({ ...current, [messageId]: useful }));
+  }
+
+  function resetConversation() {
+    setMessages([WELCOME_MESSAGE]);
+    setError(null);
+    setFeedbackByMessage({});
   }
 
   return useMemo(
     () => ({
+      session,
       messages,
       isLoading,
       error,
+      feedbackByMessage,
       sendMessage,
-      sendFeedback
+      sendFeedback,
+      resetConversation
     }),
-    [messages, isLoading, error]
+    [session, messages, isLoading, error, feedbackByMessage]
   );
 }
-

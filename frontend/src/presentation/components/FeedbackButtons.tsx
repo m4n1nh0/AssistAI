@@ -3,31 +3,42 @@ import { useState } from "react";
 
 interface FeedbackButtonsProps {
   messageId: string;
+  selected?: boolean;
   onFeedback: (messageId: string, useful: boolean) => Promise<void>;
 }
 
-export function FeedbackButtons({ messageId, onFeedback }: FeedbackButtonsProps) {
-  const [selected, setSelected] = useState<"up" | "down" | null>(null);
+export function FeedbackButtons({ messageId, selected, onFeedback }: FeedbackButtonsProps) {
+  const [localSelection, setLocalSelection] = useState<"up" | "down" | null>(
+    selected === undefined ? null : selected ? "up" : "down"
+  );
+  const [isSending, setIsSending] = useState(false);
 
   async function handleFeedback(useful: boolean) {
-    setSelected(useful ? "up" : "down");
-    await onFeedback(messageId, useful);
+    setLocalSelection(useful ? "up" : "down");
+    setIsSending(true);
+    try {
+      await onFeedback(messageId, useful);
+    } finally {
+      setIsSending(false);
+    }
   }
 
   return (
     <div className="feedback-actions" aria-label="Feedback da resposta">
       <button
         type="button"
-        className={selected === "up" ? "icon-button selected" : "icon-button"}
+        className={localSelection === "up" ? "icon-button selected" : "icon-button"}
         onClick={() => handleFeedback(true)}
+        disabled={isSending}
         title="Resposta util"
       >
         <ThumbsUp size={16} />
       </button>
       <button
         type="button"
-        className={selected === "down" ? "icon-button selected" : "icon-button"}
+        className={localSelection === "down" ? "icon-button selected" : "icon-button"}
         onClick={() => handleFeedback(false)}
+        disabled={isSending}
         title="Resposta nao util"
       >
         <ThumbsDown size={16} />
@@ -35,4 +46,3 @@ export function FeedbackButtons({ messageId, onFeedback }: FeedbackButtonsProps)
     </div>
   );
 }
-

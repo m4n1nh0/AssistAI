@@ -99,3 +99,17 @@ export interface ChatMessage {
   fallback?: boolean;
   messageId?: string;
 }
+
+export interface IntegrationStatus {
+  name: string;
+  adapter: string;
+  configured: boolean;
+}
+
+export interface ReadinessResponse {
+  status: "ready";
+  app: string;
+  version: string;
+  environment: string;
+  integrations: IntegrationStatus[];
+}
