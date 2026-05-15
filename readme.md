@@ -758,6 +758,12 @@ flowchart TD
 
 O ambiente local deve ser reproduzível por meio de containers.
 
+Suba a infraestrutura principal com:
+
+```bash
+docker compose up -d mysql qdrant
+```
+
 Componentes mínimos:
 
 - backend FastAPI;

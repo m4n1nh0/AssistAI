@@ -1,37 +1,54 @@
 # Setup local
 
+## Pre-requisitos
+
+- Docker Engine e Docker Compose v2;
+- Node.js e Python apenas se quiser rodar frontend/backend fora de containers.
+
+## Configuracao inicial
+
+Copie o arquivo de exemplo de variáveis para um `.env` local quando for executar serviços fora do Docker:
+
+```bash
+cp .env.example .env
+```
+
 ## Backend
 
-```powershell
+```bash
 cd backend
 python -m venv .venv
-.\.venv\Scripts\python -m pip install -e ".[dev]"
-.\.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ## Frontend
 
-```powershell
+```bash
 cd frontend
 npm install
-$env:VITE_API_URL = "http://localhost:8000"
+export VITE_API_URL="http://localhost:8000"
 npm run dev
 ```
 
 ## Infraestrutura local
 
-```powershell
+```bash
 docker compose up -d mysql qdrant
+docker compose ps
+docker compose logs -f mysql qdrant
 ```
 
 ## Validacao
 
-```powershell
+```bash
 cd backend
-.\.venv\Scripts\python -m pytest tests
-.\.venv\Scripts\python -m ruff check .
+source .venv/bin/activate
+python -m pytest tests
+python -m ruff check .
 
-cd ..\frontend
+cd ../frontend
 npm run build
 ```
 
