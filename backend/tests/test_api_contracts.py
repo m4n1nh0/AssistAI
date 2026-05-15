@@ -29,6 +29,21 @@ async def test_health_contract(client: httpx.AsyncClient) -> None:
 
 
 @pytest.mark.anyio
+async def test_readiness_exposes_backend_foundation(client: httpx.AsyncClient) -> None:
+    response = await client.get("/health/ready")
+
+    body = response.json()
+    integrations = {item["name"]: item for item in body["integrations"]}
+    assert response.status_code == 200
+    assert body["status"] == "ready"
+    assert body["app"] == "AssistAI"
+    assert body["version"] == "0.1.0"
+    assert integrations["llm"]["configured"] is True
+    assert integrations["relational_database"]["adapter"] == "mysql"
+    assert integrations["vector_database"]["adapter"] == "qdrant"
+
+
+@pytest.mark.anyio
 async def test_ask_known_question_returns_sources(client: httpx.AsyncClient) -> None:
     response = await client.post(
         "/ask",

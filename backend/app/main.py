@@ -2,17 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
-from app.application.services.assistant_service import AssistantService
-from app.application.services.document_service import DocumentService
-from app.application.services.feedback_service import FeedbackService
-from app.application.services.metrics_service import MetricsService
-from app.application.services.telegram_service import TelegramService
+from app.core.bootstrap import build_container
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.infrastructure.llm.fake_llm import FakeLLMGateway
-from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
-from app.infrastructure.rag.simple_retriever import SimpleRetriever
-from app.infrastructure.repositories.memory import InMemoryRepository
 
 
 def create_app() -> FastAPI:
@@ -21,7 +13,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
+        version=settings.api_version,
         description="POC do Assistente de Atendimento Inteligente.",
     )
 
@@ -33,29 +25,20 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    repository = InMemoryRepository()
-    repository.seed_default_documents()
-
-    retriever = SimpleRetriever(repository)
-    llm_gateway = FakeLLMGateway()
-    tools = SimulatedToolRegistry(enabled=settings.mcp_simulated_enabled)
-
-    app.state.repository = repository
-    app.state.document_service = DocumentService(repository)
-    app.state.assistant_service = AssistantService(
-        repository=repository,
-        retriever=retriever,
-        llm_gateway=llm_gateway,
-        tools=tools,
-        settings=settings,
-    )
-    app.state.feedback_service = FeedbackService(repository)
-    app.state.metrics_service = MetricsService(repository)
-    app.state.telegram_service = TelegramService(app.state.assistant_service)
+    container = build_container(settings)
+    app.state.settings = settings
+    app.state.repository = container.repository
+    app.state.document_service = container.document_service
+    app.state.assistant_service = container.assistant_service
+    app.state.feedback_service = container.feedback_service
+    app.state.metrics_service = container.metrics_service
+    app.state.telegram_service = container.telegram_service
+    app.state.mysql_uow = container.mysql_uow
+    app.state.vector_store = container.vector_store
+    app.state.integrations = container.integrations
 
     app.include_router(api_router, prefix=settings.api_prefix)
     return app
 
 
 app = create_app()
-

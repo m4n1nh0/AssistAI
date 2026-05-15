@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "AssistAI"
+    api_version: str = "0.1.0"
     environment: str = "local"
     api_prefix: str = ""
     mysql_url: str = "mysql+pymysql://assistai:assistai@localhost:3306/assistai"
@@ -32,4 +33,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
