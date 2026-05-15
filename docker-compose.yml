@@ -32,7 +32,7 @@ services:
       context: ./backend
     container_name: assistai-backend
     env_file:
-      - .env.example
+      - .env
     environment:
       ASSISTAI_MYSQL_URL: mysql+pymysql://assistai:assistai@mysql:3306/assistai
       ASSISTAI_QDRANT_URL: http://qdrant:6333
