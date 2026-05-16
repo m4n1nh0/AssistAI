@@ -5,10 +5,11 @@ import re
 from time import perf_counter
 
 from app.core.config import Settings
-from app.domain.contracts import AskRequest, AskResponse, SourceResponse
+from app.domain.contracts import AskRequest, AskResponse
 from app.domain.enums import Intent
 from app.domain.models import AiLog, MessageRecord, Source, new_id
 from app.domain.protocols import LLMGateway, Repository, Retriever
+from app.infrastructure.graph.assistant_graph import AssistantGraph
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
 from app.infrastructure.prompts import templates as pt
 
@@ -29,8 +30,23 @@ class AssistantService:
         self.llm_gateway = llm_gateway
         self.tools = tools
         self.settings = settings
+        self._graph = AssistantGraph(
+            repository=repository,
+            retriever=retriever,
+            llm_gateway=llm_gateway,
+            tools=tools,
+            settings=settings,
+        )
 
     def ask(self, request: AskRequest) -> AskResponse:
+        return self._graph.run(
+            message=request.message,
+            user_id=request.user_id,
+            channel=request.channel,
+        )
+
+    def ask_procedural(self, request: AskRequest) -> AskResponse:
+        """Mantido como fallback/referencia. O fluxo principal usa LangGraph."""
         started = perf_counter()
         message = _sanitize(request.message, max_chars=self.settings.max_message_chars)
         intent = _classify_intent(message)
@@ -111,28 +127,13 @@ class AssistantService:
             )
         )
 
-        logger.info(
-            "Pergunta processada: intent=%s fallback=%s "
-            "confidence=%.2f elapsed=%dms",
-            intent.value,
-            fallback,
-            confidence,
-            elapsed_ms,
-        )
-
         return AskResponse(
             answer=answer,
             fallback=fallback,
             intent=intent,
             confidence=round(confidence, 4),
             sources=[
-                SourceResponse(
-                    document_id=source.document_id,
-                    title=source.title,
-                    version=source.version,
-                    score=source.score,
-                )
-                for source in sources
+                _source_response(source) for source in sources
             ],
             attendance_id=attendance.id,
             message_id=message_record.id,
@@ -145,7 +146,6 @@ class AssistantService:
                 "Informe o numero do chamado no formato CHM-12345 para consulta.",
                 0.75,
             )
-
         result = self.tools.ticket_status(ticket_id)
         output = result.output_payload
         answer = (
@@ -199,3 +199,12 @@ def _to_sources(
             )
         )
     return sources
+
+
+def _source_response(source: Source) -> dict:
+    return {
+        "document_id": source.document_id,
+        "title": source.title,
+        "version": source.version,
+        "score": source.score,
+    }
