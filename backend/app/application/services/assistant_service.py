@@ -15,7 +15,7 @@ class AssistantService:
     def __init__(
         self,
         repository: InMemoryRepository,
-        retriever: SimpleRetriever,
+        retriever,
         llm_gateway: FakeLLMGateway,
         tools: SimulatedToolRegistry,
         settings: Settings,

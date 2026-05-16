@@ -38,6 +38,8 @@ services:
       ASSISTAI_QDRANT_URL: http://qdrant:6333
     ports:
       - "8000:8000"
+    volumes:
+      - ./knowledge_base:/knowledge_base
     depends_on:
       mysql:
         condition: service_healthy

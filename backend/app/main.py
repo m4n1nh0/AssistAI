@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.infrastructure.llm.fake_llm import FakeLLMGateway
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
-from app.infrastructure.rag.simple_retriever import SimpleRetriever
+from app.infrastructure.vector.qdrant import QdrantConfig, QdrantVectorStore
 from app.infrastructure.repositories.memory import InMemoryRepository
 
 
@@ -36,7 +36,9 @@ def create_app() -> FastAPI:
     repository = InMemoryRepository()
     repository.seed_default_documents()
 
-    retriever = SimpleRetriever(repository)
+    config = QdrantConfig(url=settings.qdrant_url, collection=settings.qdrant_collection)
+    retriever = QdrantVectorStore(config)
+    
     llm_gateway = FakeLLMGateway()
     tools = SimulatedToolRegistry(enabled=settings.mcp_simulated_enabled)
 
