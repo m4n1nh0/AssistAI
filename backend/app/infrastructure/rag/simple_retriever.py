@@ -1,8 +1,7 @@
 import re
 import unicodedata
-from dataclasses import dataclass
 
-from app.domain.models import DocumentChunk
+from app.domain.models import RetrievalResult
 from app.infrastructure.repositories.memory import InMemoryRepository
 
 STOPWORDS = {
@@ -32,12 +31,6 @@ STOPWORDS = {
     "um",
     "uma",
 }
-
-
-@dataclass(slots=True)
-class RetrievalResult:
-    chunk: DocumentChunk
-    score: float
 
 
 class SimpleRetriever:

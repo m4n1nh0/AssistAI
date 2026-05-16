@@ -5,10 +5,10 @@ from app.application.services.document_service import DocumentService
 from app.application.services.feedback_service import FeedbackService
 from app.application.services.metrics_service import MetricsService
 from app.application.services.telegram_service import TelegramService
-from app.infrastructure.repositories.memory import InMemoryRepository
+from app.domain.protocols import Repository
 
 
-def get_repository(request: Request) -> InMemoryRepository:
+def get_repository(request: Request) -> Repository:
     return request.app.state.repository
 
 

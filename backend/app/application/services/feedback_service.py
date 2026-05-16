@@ -1,9 +1,9 @@
 from app.domain.contracts import FeedbackRequest, FeedbackResponse
-from app.infrastructure.repositories.memory import InMemoryRepository
+from app.domain.protocols import Repository
 
 
 class FeedbackService:
-    def __init__(self, repository: InMemoryRepository) -> None:
+    def __init__(self, repository: Repository) -> None:
         self.repository = repository
 
     def register(self, payload: FeedbackRequest) -> FeedbackResponse:

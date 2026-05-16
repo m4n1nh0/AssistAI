@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import logging
 import re
 from time import perf_counter
 
@@ -5,18 +8,19 @@ from app.core.config import Settings
 from app.domain.contracts import AskRequest, AskResponse, SourceResponse
 from app.domain.enums import Intent
 from app.domain.models import AiLog, MessageRecord, Source, new_id
-from app.infrastructure.llm.fake_llm import FakeLLMGateway
+from app.domain.protocols import LLMGateway, Repository, Retriever
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
-from app.infrastructure.rag.simple_retriever import RetrievalResult, SimpleRetriever
-from app.infrastructure.repositories.memory import InMemoryRepository
+from app.infrastructure.prompts import templates as pt
+
+logger = logging.getLogger(__name__)
 
 
 class AssistantService:
     def __init__(
         self,
-        repository: InMemoryRepository,
-        retriever: SimpleRetriever,
-        llm_gateway: FakeLLMGateway,
+        repository: Repository,
+        retriever: Retriever,
+        llm_gateway: LLMGateway,
         tools: SimulatedToolRegistry,
         settings: Settings,
     ) -> None:
@@ -34,11 +38,13 @@ class AssistantService:
         user = self.repository.find_or_create_user(request.user_id, request.channel)
         attendance = self.repository.create_attendance(user.id, request.channel)
 
-        contexts = self.retriever.search(message)
+        contexts = self.retriever.search(
+            message, top_k=self.settings.rag_top_k
+        )
         contexts = [
-            context
-            for context in contexts
-            if context.score >= self.settings.min_relevance_score
+            ctx
+            for ctx in contexts
+            if ctx.score >= self.settings.min_relevance_score
         ]
 
         fallback = not contexts
@@ -59,17 +65,25 @@ class AssistantService:
         elif intent == Intent.TICKET_STATUS:
             answer, confidence = self._answer_ticket_status(message)
             fallback = False
-        elif fallback:
+        elif intent == Intent.GREETING:
+            fallback = False
+            confidence = 1.0
             answer = (
-                "Nao encontrei base suficiente para responder com seguranca. "
-                "Posso encaminhar este atendimento para um humano."
+                "Ola! Como posso ajudar? Sou o assistente virtual de suporte interno. "
+                "Pergunte sobre abertura de chamados, reset de senha ou "
+                "consulta de status."
             )
+        elif fallback:
+            answer = pt.FALLBACK_PROMPT
             self.repository.mark_attendance_escalated(
                 attendance.id,
                 reason="Contexto insuficiente para resposta.",
             )
         else:
-            answer = self.llm_gateway.generate(message, contexts)
+            system_prompt = pt.build_system_prompt()
+            answer = self.llm_gateway.generate(
+                message, contexts, system_prompt=system_prompt
+            )
 
         sources = _to_sources(contexts, self.repository)
         message_record = MessageRecord(
@@ -95,6 +109,15 @@ class AssistantService:
                 source_document_ids=[source.document_id for source in sources],
                 elapsed_ms=elapsed_ms,
             )
+        )
+
+        logger.info(
+            "Pergunta processada: intent=%s fallback=%s "
+            "confidence=%.2f elapsed=%dms",
+            intent.value,
+            fallback,
+            confidence,
+            elapsed_ms,
         )
 
         return AskResponse(
@@ -155,11 +178,15 @@ def _extract_ticket_id(message: str) -> str | None:
 
 
 def _to_sources(
-    contexts: list[RetrievalResult],
-    repository: InMemoryRepository,
+    contexts: list,
+    repository: Repository,
 ) -> list[Source]:
+    from app.domain.models import RetrievalResult
+
     sources: list[Source] = []
     for context in contexts:
+        if not isinstance(context, RetrievalResult):
+            continue
         document = repository.get_document(context.chunk.document_id)
         if not document:
             continue

@@ -38,6 +38,14 @@ CREATE TABLE IF NOT EXISTS documents (
   content MEDIUMTEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS document_chunks (
+  id VARCHAR(64) PRIMARY KEY,
+  document_id VARCHAR(64) NOT NULL,
+  content MEDIUMTEXT NOT NULL,
+  chunk_index INT DEFAULT 1,
+  indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS feedbacks (
   id VARCHAR(64) PRIMARY KEY,
   message_id VARCHAR(64) NOT NULL,
@@ -46,3 +54,30 @@ CREATE TABLE IF NOT EXISTS feedbacks (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS ai_logs (
+  id VARCHAR(64) PRIMARY KEY,
+  message_id VARCHAR(64) NOT NULL,
+  intent VARCHAR(64),
+  relevance_score DECIMAL(5, 4),
+  fallback BOOLEAN DEFAULT FALSE,
+  source_document_ids TEXT,
+  elapsed_ms INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS handoffs (
+  id VARCHAR(64) PRIMARY KEY,
+  attendance_id VARCHAR(64) NOT NULL,
+  reason TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tool_calls (
+  id VARCHAR(64) PRIMARY KEY,
+  message_id VARCHAR(64) NOT NULL,
+  tool_name VARCHAR(128) NOT NULL,
+  input_payload TEXT,
+  output_payload TEXT,
+  success BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

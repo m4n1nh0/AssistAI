@@ -16,9 +16,10 @@ from app.domain.models import (
     User,
     new_id,
 )
+from app.domain.protocols import Repository
 
 
-class InMemoryRepository:
+class InMemoryRepository(Repository):
     def __init__(self) -> None:
         self._lock = RLock()
         self.users: dict[str, User] = {}

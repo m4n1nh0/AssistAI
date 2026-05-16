@@ -9,6 +9,12 @@ def new_id(prefix: str) -> str:
     return f"{prefix}-{uuid4().hex[:12]}"
 
 
+@dataclass(slots=True)
+class RetrievalResult:
+    chunk: "DocumentChunk"
+    score: float
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
