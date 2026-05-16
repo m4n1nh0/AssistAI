@@ -1,4 +1,5 @@
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from threading import RLock
 
@@ -16,11 +17,14 @@ from app.domain.models import (
     User,
     new_id,
 )
+from app.infrastructure.knowledge.chunking import chunk_document
+from app.infrastructure.vector.embeddings import HashEmbeddingGenerator
 
 
 class InMemoryRepository:
-    def __init__(self) -> None:
+    def __init__(self, embedding_generator: HashEmbeddingGenerator | None = None) -> None:
         self._lock = RLock()
+        self.embedding_generator = embedding_generator or HashEmbeddingGenerator()
         self.users: dict[str, User] = {}
         self.attendances: dict[str, Attendance] = {}
         self.messages: dict[str, MessageRecord] = {}
@@ -30,6 +34,13 @@ class InMemoryRepository:
         self.ai_logs: dict[str, AiLog] = {}
         self.handoffs: dict[str, Handoff] = {}
         self.tool_calls: dict[str, ToolCall] = {}
+
+    def seed_documents(self, documents: Iterable[DocumentCreateRequest]) -> None:
+        if self.documents:
+            return
+
+        for payload in documents:
+            self.create_document(payload)
 
     def seed_default_documents(self) -> None:
         if self.documents:
@@ -177,6 +188,9 @@ class InMemoryRepository:
     def get_document(self, document_id: str) -> KnowledgeDocument | None:
         return self.documents.get(document_id)
 
+    def get_chunk(self, chunk_id: str) -> DocumentChunk | None:
+        return self.chunks.get(chunk_id)
+
     def list_attendances(self) -> list[Attendance]:
         return sorted(self.attendances.values(), key=lambda item: item.started_at, reverse=True)
 
@@ -239,28 +253,5 @@ class InMemoryRepository:
         for chunk_id in stale_ids:
             del self.chunks[chunk_id]
 
-        for index, content in enumerate(_chunk_text(document.content), start=1):
-            chunk = DocumentChunk(
-                id=new_id("chk"),
-                document_id=document.id,
-                content=content,
-                metadata={
-                    "document_id": document.id,
-                    "title": document.title,
-                    "category": document.category,
-                    "version": document.version,
-                    "status": document.status.value,
-                    "chunk_index": str(index),
-                },
-            )
+        for chunk in chunk_document(document, self.embedding_generator):
             self.chunks[chunk.id] = chunk
-
-
-def _chunk_text(text: str, max_words: int = 120) -> list[str]:
-    words = text.split()
-    if not words:
-        return []
-    return [
-        " ".join(words[index : index + max_words])
-        for index in range(0, len(words), max_words)
-    ]

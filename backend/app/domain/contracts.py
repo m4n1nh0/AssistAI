@@ -1,31 +1,85 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.enums import Channel, DocumentStatus, Intent
 
 
 class SourceResponse(BaseModel):
-    document_id: str
-    title: str
-    version: str
-    score: float
+    document_id: str = Field(..., description="Identificador do documento usado como fonte.")
+    title: str = Field(..., description="Titulo do documento usado como fonte.")
+    version: str = Field(..., description="Versao do documento usada na resposta.")
+    score: float = Field(..., ge=0.0, le=1.0, description="Score de relevancia da fonte.")
 
 
 class AskRequest(BaseModel):
-    user_id: str = Field(..., min_length=1, max_length=128)
-    channel: Channel = Channel.WEB
-    message: str = Field(..., min_length=1, max_length=2000)
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "user_id": "web-user-001",
+                    "channel": "web",
+                    "message": "Como abrir chamado no suporte?",
+                }
+            ]
+        }
+    )
+
+    user_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=128,
+        description="Identificador externo do usuario no canal de origem.",
+    )
+    channel: Channel = Field(
+        ...,
+        description="Canal que originou a pergunta.",
+    )
+    message: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="Pergunta enviada pelo usuario em linguagem natural.",
+    )
 
 
 class AskResponse(BaseModel):
-    answer: str
-    fallback: bool
-    intent: Intent
-    confidence: float
-    sources: list[SourceResponse]
-    attendance_id: str
-    message_id: str
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "answer": "Para abrir um chamado, acesse o portal de suporte interno...",
+                    "fallback": False,
+                    "intent": "procedimento",
+                    "confidence": 0.87,
+                    "sources": [
+                        {
+                            "document_id": "doc-001",
+                            "title": "Procedimento de abertura de chamado",
+                            "version": "1.0",
+                            "score": 0.91,
+                        }
+                    ],
+                    "attendance_id": "att-123",
+                    "message_id": "msg-456",
+                }
+            ]
+        }
+    )
+
+    answer: str = Field(..., description="Resposta final exibida ao usuario.")
+    fallback: bool = Field(..., description="Indica se a resposta foi fallback controlado.")
+    intent: Intent = Field(..., description="Intencao detectada pelo assistente.")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confianca da resposta.")
+    sources: list[SourceResponse] = Field(
+        ...,
+        description="Fontes usadas para fundamentar a resposta.",
+    )
+    attendance_id: str = Field(..., description="Identificador do atendimento.")
+    message_id: str = Field(
+        ...,
+        description="Identificador da mensagem para historico e feedback.",
+    )
 
 
 class FeedbackRequest(BaseModel):
@@ -114,6 +168,26 @@ class MetricSummaryResponse(BaseModel):
 
 
 class TelegramWebhookRequest(BaseModel):
-    user_id: str = Field(..., min_length=1, max_length=128)
-    message: str = Field(..., min_length=1, max_length=2000)
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "user_id": "telegram-123456",
+                    "message": "Como abrir chamado no suporte?",
+                }
+            ]
+        }
+    )
 
+    user_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=128,
+        description="Identificador externo do usuario no Telegram.",
+    )
+    message: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="Mensagem recebida do usuario no Telegram.",
+    )

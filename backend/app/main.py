@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,10 +11,26 @@ from app.application.services.metrics_service import MetricsService
 from app.application.services.telegram_service import TelegramService
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.infrastructure.database.mysql import MySqlConfig, MySqlUnitOfWork
+from app.infrastructure.knowledge.loader import load_documents
 from app.infrastructure.llm.fake_llm import FakeLLMGateway
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
 from app.infrastructure.rag.simple_retriever import SimpleRetriever
 from app.infrastructure.repositories.memory import InMemoryRepository
+from app.infrastructure.vector.qdrant import QdrantConfig, QdrantVectorStore
+
+
+def _seed_knowledge_base(repository: InMemoryRepository, knowledge_base_path: str) -> None:
+    path = Path(knowledge_base_path)
+    if not path.is_absolute():
+        path = Path(__file__).resolve().parents[2] / path
+
+    documents = load_documents(path)
+    if documents:
+        repository.seed_documents(documents)
+        return
+
+    repository.seed_default_documents()
 
 
 def create_app() -> FastAPI:
@@ -34,14 +52,23 @@ def create_app() -> FastAPI:
     )
 
     repository = InMemoryRepository()
-    repository.seed_default_documents()
+    _seed_knowledge_base(repository, settings.knowledge_base_path)
 
-    retriever = SimpleRetriever(repository)
+    mysql_uow = MySqlUnitOfWork(MySqlConfig(url=settings.mysql_url))
+    vector_store = QdrantVectorStore(
+        QdrantConfig(
+            url=settings.qdrant_url,
+            collection=settings.qdrant_collection,
+        )
+    )
+    retriever = SimpleRetriever(repository, vector_store=vector_store)
     llm_gateway = FakeLLMGateway()
     tools = SimulatedToolRegistry(enabled=settings.mcp_simulated_enabled)
 
     app.state.repository = repository
-    app.state.document_service = DocumentService(repository)
+    app.state.mysql_uow = mysql_uow
+    app.state.vector_store = vector_store
+    app.state.document_service = DocumentService(repository, vector_store)
     app.state.assistant_service = AssistantService(
         repository=repository,
         retriever=retriever,
@@ -58,4 +85,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-

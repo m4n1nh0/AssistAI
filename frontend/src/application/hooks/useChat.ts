@@ -2,8 +2,7 @@ import { useMemo, useState } from "react";
 
 import type { ChatMessage } from "../../domain/contracts";
 import { apiClient } from "../../infrastructure/api/client";
-
-const USER_ID = "web-user-001";
+import { appConfig } from "../config";
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -34,7 +33,7 @@ export function useChat() {
 
     try {
       const response = await apiClient.ask({
-        user_id: USER_ID,
+        user_id: appConfig.webUserId,
         channel: "web",
         message: trimmed
       });
@@ -72,4 +71,3 @@ export function useChat() {
     [messages, isLoading, error]
   );
 }
-

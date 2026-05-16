@@ -62,6 +62,104 @@ Ao final da semana, o backend deve possuir um endpoint funcional que recebe uma 
 | S1-11 | Criar testes iniciais de contrato da API | Garantir que a estrutura de entrada e saída da API esteja estável para frontend, Telegram e testes. |
 | S1-12 | Criar checklist de PR, branch e padrão de commit | Organizar a colaboração entre os 10 devs, reduzindo conflitos, retrabalho e inconsistência de código. |
 
+## Evidência da S1-01
+
+O contrato oficial de pergunta e resposta do assistente foi definido em
+[`docs/contrato_assistente.md`](contrato_assistente.md), com campos,
+tipos, enums, exemplos, regras de compatibilidade e critérios de aceite para
+Web, Telegram, API e motor de IA/RAG.
+
+## Evidência da S1-02
+
+A estrutura inicial do backend FastAPI está definida em `backend/app`, com
+`create_app()` em `backend/app/main.py`, router central em
+`backend/app/api/router.py`, camadas `api`, `application`, `domain`,
+`infrastructure` e testes em `backend/tests`. A composição inicial registra a
+API, serviços de aplicação, repositório em memória, gateway LLM fake, RAG
+inicial e placeholders de integração para MySQL e Qdrant. O guia técnico da
+estrutura está em [`backend/README.md`](../backend/README.md).
+
+## Evidência da S1-03
+
+A estrutura inicial do frontend React + TypeScript está definida em
+`frontend/src`, com entrada em `src/main.tsx`, shell em
+`src/presentation/App.tsx`, telas em `src/presentation/pages`, componentes em
+`src/presentation/components`, hook de conversa em
+`src/application/hooks/useChat.ts`, configuração em
+`src/application/config.ts`, contratos em `src/domain/contracts.ts` e cliente
+HTTP em `src/infrastructure/api/client.ts`. O guia técnico da aplicação Web
+está em [`frontend/README.md`](../frontend/README.md).
+
+## Evidência da S1-04
+
+O ambiente local de persistência transacional e busca vetorial está definido em
+[`docker-compose.yml`](../docker-compose.yml), com os serviços `mysql` e
+`qdrant`, volumes nomeados para dados locais e portas padronizadas
+`3306`, `6333` e `6334`. O schema inicial do MySQL fica em
+[`infra/mysql/init/001_schema.sql`](../infra/mysql/init/001_schema.sql) e o
+passo a passo de subida, validação, parada e reset está em
+[`docs/setup_local.md`](setup_local.md).
+
+## Evidência da S1-05
+
+O modelo inicial de atendimento, mensagem e feedback está definido em
+[`backend/app/domain/models.py`](../backend/app/domain/models.py), com
+`User`, `Attendance`, `MessageRecord`, `Feedback`, `Source`, `AiLog` e
+`DocumentChunk`. O repositório inicial em memória registra usuários,
+atendimentos, mensagens, avaliações e logs em
+[`backend/app/infrastructure/repositories/memory.py`](../backend/app/infrastructure/repositories/memory.py).
+
+## Evidência da S1-06
+
+A base inicial de conhecimento de suporte interno está em
+[`knowledge_base/suporte_interno.md`](../knowledge_base/suporte_interno.md),
+cobrindo abertura de chamado, reset de senha, status de chamado, atendimento
+humano e horário de atendimento. A aplicação carrega essa base no bootstrap por
+meio de `ASSISTAI_KNOWLEDGE_BASE_PATH`.
+
+## Evidência da S1-07
+
+O loader de documentos foi implementado em
+[`backend/app/infrastructure/knowledge/loader.py`](../backend/app/infrastructure/knowledge/loader.py),
+com suporte a diretórios e arquivos Markdown, JSON e TXT. O carregamento da
+base inicial acontece em [`backend/app/main.py`](../backend/app/main.py).
+
+## Evidência da S1-08
+
+O chunking inicial foi implementado em
+[`backend/app/infrastructure/knowledge/chunking.py`](../backend/app/infrastructure/knowledge/chunking.py),
+com tamanho controlado, overlap entre chunks, metadados de rastreabilidade e
+geração de chunks a partir dos documentos carregados.
+
+## Evidência da S1-09
+
+A geração de embeddings determinísticos está em
+[`backend/app/infrastructure/vector/embeddings.py`](../backend/app/infrastructure/vector/embeddings.py).
+A indexação no Qdrant está em
+[`backend/app/infrastructure/vector/qdrant.py`](../backend/app/infrastructure/vector/qdrant.py)
+e é acionada por `POST /documents/reindex`, preservando fallback local quando o
+Qdrant não está disponível no ambiente do dev.
+
+## Evidência da S1-10
+
+O endpoint `POST /ask` está implementado em
+[`backend/app/api/routes/ask.py`](../backend/app/api/routes/ask.py) e usa o
+serviço do assistente em
+[`backend/app/application/services/assistant_service.py`](../backend/app/application/services/assistant_service.py).
+A busca semântica inicial fica em
+[`backend/app/infrastructure/rag/simple_retriever.py`](../backend/app/infrastructure/rag/simple_retriever.py),
+com embeddings locais e uso de Qdrant quando a base foi reindexada com sucesso.
+
+## Evidência da S1-11
+
+Os testes iniciais de contrato e pipeline estão em
+[`backend/tests/test_api_contracts.py`](../backend/tests/test_api_contracts.py),
+[`backend/tests/test_app_bootstrap.py`](../backend/tests/test_app_bootstrap.py)
+e
+[`backend/tests/test_knowledge_pipeline.py`](../backend/tests/test_knowledge_pipeline.py).
+A suíte cobre contrato de `/ask`, fallback, persistência inicial do atendimento,
+feedback, reindexação, loader, chunking e embeddings.
+
 ## Critério de pronto da Semana 1
 
 ```text

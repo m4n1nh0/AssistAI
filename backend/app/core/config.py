@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     mysql_url: str = "mysql+pymysql://assistai:assistai@localhost:3306/assistai"
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "assistai_knowledge"
+    knowledge_base_path: str = "knowledge_base"
     llm_provider: str = "mock"
     llm_api_key: str | None = None
     telegram_bot_token: str | None = None
@@ -32,4 +33,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

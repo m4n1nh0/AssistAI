@@ -273,6 +273,12 @@ O backend será a camada central da solução. Ele concentra:
 
 ## 9. Contratos principais da API
 
+O contrato oficial de pergunta e resposta do assistente está documentado em
+[`docs/contrato_assistente.md`](docs/contrato_assistente.md). O backend mantém
+o contrato técnico em `backend/app/domain/contracts.py`, o frontend espelha os
+tipos em `frontend/src/domain/contracts.ts` e o OpenAPI local expõe a versão
+executável em `GET /openapi.json`.
+
 ### 9.1 Enviar pergunta ao assistente
 
 **Endpoint:** `POST /ask`
@@ -968,4 +974,3 @@ Ao final das 5 semanas, a solução deve estar pronta para demonstrar:
 - métricas básicas;
 - integração externa simulada;
 - evidências de qualidade técnica.
-

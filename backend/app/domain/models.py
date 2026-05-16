@@ -82,6 +82,7 @@ class DocumentChunk:
     document_id: str
     content: str
     metadata: dict[str, str]
+    embedding: list[float] = field(default_factory=list)
     indexed_at: datetime = field(default_factory=utc_now)
 
 
@@ -114,4 +115,3 @@ class ToolCall:
     output_payload: dict[str, str]
     success: bool
     created_at: datetime = field(default_factory=utc_now)
-
