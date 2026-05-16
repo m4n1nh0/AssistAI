@@ -27,9 +27,9 @@ Endpoints de apoio:
 | `app/domain` | Contratos Pydantic, enums e modelos de dominio. |
 | `app/infrastructure/repositories` | Adaptador inicial em memoria para acelerar a POC. |
 | `app/infrastructure/rag` | Recuperador inicial usado antes da integracao completa com Qdrant. |
-| `app/infrastructure/database` | Ponto de extensao para persistencia MySQL. |
+| `app/infrastructure/database` | Persistencia auditavel MySQL para interacoes e feedback. |
 | `app/infrastructure/vector` | Ponto de extensao para Qdrant. |
-| `app/infrastructure/llm` | Gateway inicial de LLM mockado. |
+| `app/infrastructure/llm` | Prompt base, gateway local controlado e adapter OpenAI-compatible. |
 | `tests` | Testes de contrato e bootstrap da API. |
 
 ## Bootstrap atual
@@ -37,11 +37,11 @@ Endpoints de apoio:
 `create_app()` instancia e registra em `app.state`:
 
 - repositorio em memoria com documentos de suporte iniciais;
-- `MySqlUnitOfWork`, configurado por `ASSISTAI_MYSQL_URL`;
+- `MySqlUnitOfWork` e `MySqlAuditStore`, configurados por `ASSISTAI_MYSQL_URL`;
 - `QdrantVectorStore`, configurado por `ASSISTAI_QDRANT_URL` e
   `ASSISTAI_QDRANT_COLLECTION`;
 - recuperador RAG inicial;
-- gateway LLM fake;
+- gateway LLM selecionado por `ASSISTAI_LLM_PROVIDER`;
 - registry MCP simulado;
 - servicos de aplicacao usados pelas rotas.
 
@@ -63,3 +63,12 @@ Endpoints de apoio:
 
 As configuracoes usam prefixo `ASSISTAI_` e podem ser declaradas em `.env`.
 Consulte `.env.example` na raiz do projeto para valores locais.
+
+Para IA, o provider padrao `mock` usa um gerador local estritamente baseado no
+contexto recuperado. Para chamar um LLM externo, configure
+`ASSISTAI_LLM_PROVIDER=openai-compatible`, `ASSISTAI_LLM_API_KEY`,
+`ASSISTAI_LLM_MODEL` e `ASSISTAI_LLM_BASE_URL`.
+
+Para auditoria em MySQL, mantenha `ASSISTAI_MYSQL_PERSISTENCE_ENABLED=true`.
+Quando o banco estiver indisponivel, a API segue operando com o repositorio em
+memoria e registra o skip em log.

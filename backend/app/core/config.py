@@ -8,11 +8,16 @@ class Settings(BaseSettings):
     environment: str = "local"
     api_prefix: str = ""
     mysql_url: str = "mysql+pymysql://assistai:assistai@localhost:3306/assistai"
+    mysql_connect_timeout_seconds: float = 3.0
+    mysql_persistence_enabled: bool = False
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "assistai_knowledge"
     knowledge_base_path: str = "knowledge_base"
     llm_provider: str = "mock"
     llm_api_key: str | None = None
+    llm_model: str = "gpt-4o-mini"
+    llm_base_url: str = "https://api.openai.com/v1"
+    llm_timeout_seconds: float = 20.0
     telegram_bot_token: str | None = None
     min_relevance_score: float = 0.15
     max_message_chars: int = 2000

@@ -4,8 +4,10 @@ from time import perf_counter
 from app.core.config import Settings
 from app.domain.contracts import AskRequest, AskResponse, SourceResponse
 from app.domain.enums import Intent
-from app.domain.models import AiLog, MessageRecord, Source, new_id
-from app.infrastructure.llm.fake_llm import FakeLLMGateway
+from app.domain.models import AiLog, Handoff, MessageRecord, Source, new_id
+from app.infrastructure.database.mysql import MySqlAuditStore
+from app.infrastructure.llm.gateway import LlmGateway, LlmGatewayUnavailable
+from app.infrastructure.llm.prompt import FALLBACK_ANSWER
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
 from app.infrastructure.rag.simple_retriever import RetrievalResult, SimpleRetriever
 from app.infrastructure.repositories.memory import InMemoryRepository
@@ -16,15 +18,17 @@ class AssistantService:
         self,
         repository: InMemoryRepository,
         retriever: SimpleRetriever,
-        llm_gateway: FakeLLMGateway,
+        llm_gateway: LlmGateway,
         tools: SimulatedToolRegistry,
         settings: Settings,
+        audit_store: MySqlAuditStore | None = None,
     ) -> None:
         self.repository = repository
         self.retriever = retriever
         self.llm_gateway = llm_gateway
         self.tools = tools
         self.settings = settings
+        self.audit_store = audit_store
 
     def ask(self, request: AskRequest) -> AskResponse:
         started = perf_counter()
@@ -44,6 +48,7 @@ class AssistantService:
         fallback = not contexts
         answer = ""
         confidence = contexts[0].score if contexts else 0.0
+        handoff: Handoff | None = None
 
         if intent == Intent.HUMAN_REQUEST:
             fallback = True
@@ -52,7 +57,7 @@ class AssistantService:
                 "Entendi que voce precisa de atendimento humano. "
                 "Marquei este atendimento para escalonamento."
             )
-            self.repository.mark_attendance_escalated(
+            handoff = self.repository.mark_attendance_escalated(
                 attendance.id,
                 reason="Usuario solicitou atendimento humano.",
             )
@@ -60,16 +65,28 @@ class AssistantService:
             answer, confidence = self._answer_ticket_status(message)
             fallback = False
         elif fallback:
-            answer = (
-                "Nao encontrei base suficiente para responder com seguranca. "
-                "Posso encaminhar este atendimento para um humano."
-            )
-            self.repository.mark_attendance_escalated(
+            answer = FALLBACK_ANSWER
+            handoff = self.repository.mark_attendance_escalated(
                 attendance.id,
                 reason="Contexto insuficiente para resposta.",
             )
         else:
-            answer = self.llm_gateway.generate(message, contexts)
+            try:
+                generation = self.llm_gateway.generate(message, contexts)
+            except LlmGatewayUnavailable:
+                generation = None
+
+            if generation and generation.safe_to_answer:
+                answer = generation.answer
+            else:
+                fallback = True
+                confidence = 0.0
+                contexts = []
+                answer = FALLBACK_ANSWER
+                handoff = self.repository.mark_attendance_escalated(
+                    attendance.id,
+                    reason="LLM nao retornou resposta segura com base no contexto.",
+                )
 
         sources = _to_sources(contexts, self.repository)
         message_record = MessageRecord(
@@ -85,17 +102,24 @@ class AssistantService:
         self.repository.add_message(message_record)
 
         elapsed_ms = round((perf_counter() - started) * 1000)
-        self.repository.add_ai_log(
-            AiLog(
-                id=new_id("ailog"),
-                message_id=message_record.id,
-                intent=intent,
-                relevance_score=round(confidence, 4),
-                fallback=fallback,
-                source_document_ids=[source.document_id for source in sources],
-                elapsed_ms=elapsed_ms,
-            )
+        ai_log = AiLog(
+            id=new_id("ailog"),
+            message_id=message_record.id,
+            intent=intent,
+            relevance_score=round(confidence, 4),
+            fallback=fallback,
+            source_document_ids=[source.document_id for source in sources],
+            elapsed_ms=elapsed_ms,
         )
+        self.repository.add_ai_log(ai_log)
+        if self.audit_store:
+            self.audit_store.persist_interaction(
+                user=user,
+                attendance=attendance,
+                message=message_record,
+                ai_log=ai_log,
+                handoff=handoff,
+            )
 
         return AskResponse(
             answer=answer,

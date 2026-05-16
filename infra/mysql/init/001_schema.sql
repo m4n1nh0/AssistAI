@@ -24,6 +24,35 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS message_sources (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  message_id VARCHAR(64) NOT NULL,
+  document_id VARCHAR(64) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  version VARCHAR(32) NOT NULL,
+  score DECIMAL(6, 4) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_message_sources_message_id (message_id)
+);
+
+CREATE TABLE IF NOT EXISTS ai_logs (
+  id VARCHAR(64) PRIMARY KEY,
+  message_id VARCHAR(64) NOT NULL,
+  intent VARCHAR(64),
+  relevance_score DECIMAL(6, 4),
+  fallback BOOLEAN DEFAULT FALSE,
+  source_document_ids JSON,
+  elapsed_ms INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS handoffs (
+  id VARCHAR(64) PRIMARY KEY,
+  attendance_id VARCHAR(64) NOT NULL,
+  reason TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS documents (
   id VARCHAR(64) PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
@@ -45,4 +74,3 @@ CREATE TABLE IF NOT EXISTS feedbacks (
   comment TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-

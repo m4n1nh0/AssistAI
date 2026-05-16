@@ -7,9 +7,9 @@ Requires-Dist: fastapi>=0.115.0
 Requires-Dist: uvicorn[standard]>=0.30.0
 Requires-Dist: pydantic-settings>=2.4.0
 Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: pymysql>=1.1.1
 Provides-Extra: database
 Requires-Dist: alembic>=1.13.0; extra == "database"
-Requires-Dist: pymysql>=1.1.1; extra == "database"
 Requires-Dist: sqlalchemy>=2.0.0; extra == "database"
 Provides-Extra: ai
 Requires-Dist: langgraph>=0.2.0; extra == "ai"
