@@ -1,2 +1,0 @@
-"""RAG and retrieval adapters."""
-

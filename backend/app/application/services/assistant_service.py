@@ -1,107 +1,188 @@
-import re
-from time import perf_counter
+from dataclasses import asdict
+from uuid import uuid4
 
-from app.core.config import Settings
-from app.domain.contracts import AskRequest, AskResponse, SourceResponse
+from app.core.config import settings
+from app.db.models import AttendanceModel, MessageModel
+from app.db.session import SessionLocal
+from app.domain.entities import Attendance, Message, Source
 from app.domain.enums import Intent
-from app.domain.models import AiLog, MessageRecord, Source, new_id
-from app.infrastructure.llm.fake_llm import FakeLLMGateway
-from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
-from app.infrastructure.rag.simple_retriever import RetrievalResult, SimpleRetriever
-from app.infrastructure.repositories.memory import InMemoryRepository
+from app.infrastructure.llm_client import LLMClient
+from app.infrastructure.qdrant_client import QdrantGateway
+from app.infrastructure.repositories.memory import store
+from app.rag.intent_classifier import IntentClassifier
+from app.rag.loader import load_markdown_documents
+from app.rag.retriever import KeywordRetriever
+from app.security.input_sanitizer import sanitize_user_message
+from app.security.prompt_injection import has_prompt_injection_risk
+from app.schemas.ask import AskRequest, AskResponse, SourceResponse
 
 
 class AssistantService:
-    def __init__(
-        self,
-        repository: InMemoryRepository,
-        retriever: SimpleRetriever,
-        llm_gateway: FakeLLMGateway,
-        tools: SimulatedToolRegistry,
-        settings: Settings,
-    ) -> None:
-        self.repository = repository
-        self.retriever = retriever
-        self.llm_gateway = llm_gateway
-        self.tools = tools
-        self.settings = settings
+    def __init__(self) -> None:
+        self.intent_classifier = IntentClassifier()
+        self.retriever = KeywordRetriever()
+        self.llm = LLMClient()
+        self.qdrant = QdrantGateway()
 
-    def ask(self, request: AskRequest) -> AskResponse:
-        started = perf_counter()
-        message = _sanitize(request.message, max_chars=self.settings.max_message_chars)
-        intent = _classify_intent(message)
+    def answer(self, payload: AskRequest) -> AskResponse:
+        payload.message = sanitize_user_message(payload.message)
+        attendance = self._get_or_create_attendance(payload)
+        intent, confidence = self.intent_classifier.classify(payload.message)
 
-        user = self.repository.find_or_create_user(request.user_id, request.channel)
-        attendance = self.repository.create_attendance(user.id, request.channel)
+        if has_prompt_injection_risk(payload.message):
+            answer = "Não posso seguir instruções que tentem alterar as regras internas do atendimento."
+            return self._persist_and_respond(payload, attendance, answer, True, Intent.OUT_OF_SCOPE, 0.95, [])
 
-        contexts = self.retriever.search(message)
-        contexts = [
-            context
-            for context in contexts
-            if context.score >= self.settings.min_relevance_score
-        ]
-
-        fallback = not contexts
-        answer = ""
-        confidence = contexts[0].score if contexts else 0.0
+        if intent == Intent.GREETING:
+            answer = "Olá! Como posso ajudar com suporte interno hoje?"
+            return self._persist_and_respond(payload, attendance, answer, False, intent, confidence, [])
 
         if intent == Intent.HUMAN_REQUEST:
-            fallback = True
-            confidence = 1.0
-            answer = (
-                "Entendi que voce precisa de atendimento humano. "
-                "Marquei este atendimento para escalonamento."
-            )
-            self.repository.mark_attendance_escalated(
-                attendance.id,
-                reason="Usuario solicitou atendimento humano.",
-            )
-        elif intent == Intent.TICKET_STATUS:
-            answer, confidence = self._answer_ticket_status(message)
-            fallback = False
-        elif fallback:
-            answer = (
-                "Nao encontrei base suficiente para responder com seguranca. "
-                "Posso encaminhar este atendimento para um humano."
-            )
-            self.repository.mark_attendance_escalated(
-                attendance.id,
-                reason="Contexto insuficiente para resposta.",
-            )
-        else:
-            answer = self.llm_gateway.generate(message, contexts)
+            answer = "Entendi. Vou marcar este atendimento para acompanhamento humano."
+            return self._persist_and_respond(payload, attendance, answer, False, intent, confidence, [])
 
-        sources = _to_sources(contexts, self.repository)
-        message_record = MessageRecord(
-            id=new_id("msg"),
+        retrieved = self._search_with_qdrant(payload.message)
+        reliable_context = [item for item in retrieved if item["score"] >= settings.min_relevance_score]
+
+        if not reliable_context:
+            answer = "Não encontrei base suficiente para responder com segurança. Posso encaminhar para atendimento humano."
+            return self._persist_and_respond(payload, attendance, answer, True, Intent.OUT_OF_SCOPE, confidence, [])
+
+        context = "\n\n".join(item["payload"].get("chunk_text", "") for item in reliable_context)
+        answer = self.llm.generate_answer(payload.message, context)
+        sources = [
+            Source(
+                document_id=item["payload"].get("document_id", ""),
+                title=item["payload"].get("title", ""),
+                version=item["payload"].get("version", ""),
+                score=item["score"],
+            )
+            for item in reliable_context
+        ]
+        return self._persist_and_respond(payload, attendance, answer, False, intent, confidence, sources)
+
+    def _search_with_qdrant(self, message: str) -> list[dict]:
+        try:
+            return self.qdrant.search(message, limit=3)
+        except Exception:
+            documents = list(store.documents.values()) or load_markdown_documents(settings.knowledge_base_path)
+            return [
+                {
+                    "id": f"{item.document.id}-fallback",
+                    "score": item.score,
+                    "payload": {
+                        "document_id": item.document.id,
+                        "title": item.document.title,
+                        "version": item.document.version,
+                        "chunk_text": item.excerpt,
+                    },
+                }
+                for item in self.retriever.search(message, documents)
+            ]
+
+    def _get_or_create_attendance(self, payload: AskRequest) -> Attendance:
+        try:
+            with SessionLocal() as session:
+                attendance_model = (
+                    session.query(AttendanceModel)
+                    .filter_by(user_id=payload.user_id, channel=payload.channel)
+                    .one_or_none()
+                )
+                if attendance_model is not None:
+                    attendance = Attendance(
+                        id=attendance_model.id,
+                        user_id=attendance_model.user_id,
+                        channel=attendance_model.channel,
+                        messages=[
+                            Message(
+                                id=message.id,
+                                attendance_id=message.attendance_id,
+                                user_message=message.user_message,
+                                assistant_answer=message.assistant_answer,
+                                fallback=message.fallback,
+                                intent=Intent(message.intent),
+                                confidence=message.confidence,
+                                sources=[Source(**source) for source in (message.sources or [])],
+                                created_at=message.created_at,
+                            )
+                            for message in attendance_model.messages
+                        ],
+                        created_at=attendance_model.created_at,
+                    )
+                    store.attendances[attendance.id] = attendance
+                    return attendance
+
+                attendance = Attendance(id=f"att-{uuid4()}", user_id=payload.user_id, channel=payload.channel)
+                store.attendances[attendance.id] = attendance
+                session.add(
+                    AttendanceModel(id=attendance.id, user_id=attendance.user_id, channel=attendance.channel)
+                )
+                session.commit()
+                return attendance
+        except Exception:
+            attendance = next(
+                (
+                    attendance
+                    for attendance in store.attendances.values()
+                    if attendance.user_id == payload.user_id and attendance.channel == payload.channel
+                ),
+                None,
+            )
+            if attendance:
+                return attendance
+
+            attendance = Attendance(id=f"att-{uuid4()}", user_id=payload.user_id, channel=payload.channel)
+            store.attendances[attendance.id] = attendance
+            return attendance
+
+    def _persist_message(self, message: Message) -> None:
+        try:
+            with SessionLocal() as session:
+                session.add(
+                    MessageModel(
+                        id=message.id,
+                        attendance_id=message.attendance_id,
+                        user_message=message.user_message,
+                        assistant_answer=message.assistant_answer,
+                        fallback=message.fallback,
+                        intent=message.intent.value,
+                        confidence=message.confidence,
+                        sources=[asdict(source) for source in message.sources],
+                    )
+                )
+                session.commit()
+        except Exception:
+            pass
+
+    def _persist_and_respond(
+        self,
+        payload: AskRequest,
+        attendance: Attendance,
+        answer: str,
+        fallback: bool,
+        intent: Intent,
+        confidence: float,
+        sources: list[Source],
+    ) -> AskResponse:
+        message = Message(
+            id=f"msg-{uuid4()}",
             attendance_id=attendance.id,
-            user_message=message,
+            user_message=payload.message,
             assistant_answer=answer,
             fallback=fallback,
             intent=intent,
-            confidence=round(confidence, 4),
+            confidence=confidence,
             sources=sources,
         )
-        self.repository.add_message(message_record)
-
-        elapsed_ms = round((perf_counter() - started) * 1000)
-        self.repository.add_ai_log(
-            AiLog(
-                id=new_id("ailog"),
-                message_id=message_record.id,
-                intent=intent,
-                relevance_score=round(confidence, 4),
-                fallback=fallback,
-                source_document_ids=[source.document_id for source in sources],
-                elapsed_ms=elapsed_ms,
-            )
-        )
+        attendance.messages.append(message)
+        store.messages[message.id] = message
+        self._persist_message(message)
 
         return AskResponse(
             answer=answer,
             fallback=fallback,
             intent=intent,
-            confidence=round(confidence, 4),
+            confidence=confidence,
             sources=[
                 SourceResponse(
                     document_id=source.document_id,
@@ -112,63 +193,9 @@ class AssistantService:
                 for source in sources
             ],
             attendance_id=attendance.id,
-            message_id=message_record.id,
+            message_id=message.id,
         )
 
-    def _answer_ticket_status(self, message: str) -> tuple[str, float]:
-        ticket_id = _extract_ticket_id(message)
-        if not ticket_id:
-            return (
-                "Informe o numero do chamado no formato CHM-12345 para consulta.",
-                0.75,
-            )
 
-        result = self.tools.ticket_status(ticket_id)
-        output = result.output_payload
-        answer = (
-            f"O chamado {output.get('ticket_id', ticket_id)} esta "
-            f"{output.get('status', 'indisponivel')}. "
-            f"Ultima atualizacao: {output.get('last_update', 'sem registro')}."
-        )
-        return answer, 0.9 if result.success else 0.3
-
-
-def _sanitize(message: str, max_chars: int) -> str:
-    compact = " ".join(message.strip().split())
-    return compact[:max_chars]
-
-
-def _classify_intent(message: str) -> Intent:
-    lower = message.lower()
-    if any(term in lower for term in ["humano", "atendente", "pessoa"]):
-        return Intent.HUMAN_REQUEST
-    if re.search(r"\bchm-\d+\b", lower):
-        return Intent.TICKET_STATUS
-    if lower in {"oi", "ola", "olá", "bom dia", "boa tarde", "boa noite"}:
-        return Intent.GREETING
-    return Intent.PROCEDURE
-
-
-def _extract_ticket_id(message: str) -> str | None:
-    match = re.search(r"\b(CHM-\d+)\b", message, flags=re.IGNORECASE)
-    return match.group(1).upper() if match else None
-
-
-def _to_sources(
-    contexts: list[RetrievalResult],
-    repository: InMemoryRepository,
-) -> list[Source]:
-    sources: list[Source] = []
-    for context in contexts:
-        document = repository.get_document(context.chunk.document_id)
-        if not document:
-            continue
-        sources.append(
-            Source(
-                document_id=document.id,
-                title=document.title,
-                version=document.version,
-                score=context.score,
-            )
-        )
-    return sources
+def get_assistant_service() -> AssistantService:
+    return AssistantService()

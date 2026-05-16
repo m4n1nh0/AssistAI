@@ -2,13 +2,11 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json package-lock.json* ./
 RUN npm install
 
-COPY index.html tsconfig.json tsconfig.node.json vite.config.ts ./
-COPY src ./src
+COPY . .
 
 EXPOSE 5173
 
 CMD ["npm", "run", "dev"]
-

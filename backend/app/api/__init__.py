@@ -1,2 +1,1 @@
-"""HTTP API layer."""
-
+"""Rotas HTTP e contratos públicos."""

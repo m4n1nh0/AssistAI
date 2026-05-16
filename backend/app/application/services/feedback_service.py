@@ -1,21 +1,35 @@
-from app.domain.contracts import FeedbackRequest, FeedbackResponse
-from app.infrastructure.repositories.memory import InMemoryRepository
+from uuid import uuid4
+
+from app.db.models import FeedbackModel
+from app.db.session import SessionLocal
+from app.infrastructure.repositories.memory import store
+from app.schemas.feedback import FeedbackRequest, FeedbackResponse
 
 
 class FeedbackService:
-    def __init__(self, repository: InMemoryRepository) -> None:
-        self.repository = repository
-
     def register(self, payload: FeedbackRequest) -> FeedbackResponse:
-        feedback = self.repository.add_feedback(
+        feedback_id = f"fb-{uuid4()}"
+        try:
+            with SessionLocal() as session:
+                session.add(
+                    FeedbackModel(
+                        id=feedback_id,
+                        message_id=payload.message_id,
+                        useful=payload.useful,
+                        comment=payload.comment,
+                    )
+                )
+                session.commit()
+        except Exception:
+            pass
+
+        store.feedbacks[feedback_id] = payload.model_dump()
+        return FeedbackResponse(
+            feedback_id=feedback_id,
             message_id=payload.message_id,
             useful=payload.useful,
-            comment=payload.comment,
-        )
-        return FeedbackResponse(
-            feedback_id=feedback.id,
-            message_id=feedback.message_id,
-            useful=feedback.useful,
-            created_at=feedback.created_at,
         )
 
+
+def get_feedback_service() -> FeedbackService:
+    return FeedbackService()

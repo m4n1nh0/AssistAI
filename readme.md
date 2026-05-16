@@ -98,6 +98,64 @@ O assistente deve ser capaz de:
 
 ```mermaid
 flowchart TD
+    A[Usuário Web/Telegram] --> B[API FastAPI]
+    B --> C[Intenção + Sanitização]
+    C --> D[Busca Qdrant]
+    D --> E[LLM + Prompt]
+    E --> F[Resposta ou Fallback]
+    F --> G[Persistir MySQL]
+    G --> H[Feedback/Métricas]
+```
+
+---
+
+## 6. Setup do Ambiente de Desenvolvimento
+
+### Pré-requisitos
+- Python 3.8+
+- Node.js 16+
+- Docker (opcional, para bancos locais)
+- Git
+
+### Instalação
+
+1. **Clone o repositório** (se aplicável) e navegue para a pasta do projeto.
+
+2. **Backend (Python/FastAPI):**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
+
+3. **Frontend (React/TypeScript):**
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+4. **Variáveis de ambiente:**
+   - Copie `.env.example` para `.env` na raiz do projeto.
+   - Preencha `LLM_API_KEY`, `QDRANT_URL`, `QDRANT_COLLECTION` e `MYSQL_URL`.
+
+5. **Bancos de dados:**
+   - Instale Docker e execute:
+     ```bash
+     docker-compose up -d
+     ```
+   - Ou configure MySQL e Qdrant manualmente.
+
+6. **Executar:**
+   - Backend: `cd backend && uvicorn app.main:app --reload`
+   - Frontend: `cd frontend && npm start`
+
+### Estrutura do Projeto
+- `backend/`: API FastAPI
+- `frontend/`: Interface React
+- `docs/`: Documentação e base de conhecimento
+- `tests/`: Testes automatizados
+- `docker-compose.yml`: Ambiente local
+- `docs/contribution_checklist.md`: checklist de PR, branches, commits e revisão
+
     U[Usuário] --> WEB[Web Chat - React]
     U --> TG[Telegram Bot]
 
@@ -968,4 +1026,3 @@ Ao final das 5 semanas, a solução deve estar pronta para demonstrar:
 - métricas básicas;
 - integração externa simulada;
 - evidências de qualidade técnica.
-

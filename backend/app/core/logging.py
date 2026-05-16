@@ -1,10 +1,9 @@
 import logging
 
 
-def configure_logging(environment: str) -> None:
-    level = logging.DEBUG if environment == "local" else logging.INFO
+def get_logger(name: str) -> logging.Logger:
     logging.basicConfig(
-        level=level,
+        level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-
+    return logging.getLogger(name)

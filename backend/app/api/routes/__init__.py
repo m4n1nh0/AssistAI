@@ -1,2 +1,1 @@
-"""Route modules."""
-
+"""Agrupamento das rotas da API."""

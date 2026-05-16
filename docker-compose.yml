@@ -1,17 +1,16 @@
 services:
   mysql:
     image: mysql:8.4
-    container_name: assistai-mysql
+    container_name: assistant-mysql
     environment:
-      MYSQL_DATABASE: assistai
-      MYSQL_USER: assistai
-      MYSQL_PASSWORD: assistai
-      MYSQL_ROOT_PASSWORD: assistai_root
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: assistant
+      MYSQL_USER: assistant
+      MYSQL_PASSWORD: assistant
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./infra/mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -19,8 +18,8 @@ services:
       retries: 5
 
   qdrant:
-    image: qdrant/qdrant:v1.11.5
-    container_name: assistai-qdrant
+    image: qdrant/qdrant:v1.12.6
+    container_name: assistant-qdrant
     ports:
       - "6333:6333"
       - "6334:6334"
@@ -30,14 +29,14 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: assistai-backend
+    container_name: assistant-backend
     env_file:
-      - .env.example
-    environment:
-      ASSISTAI_MYSQL_URL: mysql+pymysql://assistai:assistai@mysql:3306/assistai
-      ASSISTAI_QDRANT_URL: http://qdrant:6333
+      - ./backend/.env.example
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./docs:/docs
     depends_on:
       mysql:
         condition: service_healthy
@@ -47,15 +46,17 @@ services:
   frontend:
     build:
       context: ./frontend
-    container_name: assistai-frontend
-    environment:
-      VITE_API_URL: http://localhost:8000
+    container_name: assistant-frontend
+    env_file:
+      - ./frontend/.env.example
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - backend
 
 volumes:
   mysql_data:
   qdrant_data:
-

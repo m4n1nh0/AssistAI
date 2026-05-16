@@ -1,24 +1,14 @@
-from typing import Annotated
+from fastapi import APIRouter, Depends, status
 
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from app.api.dependencies import get_feedback_service
-from app.application.services.feedback_service import FeedbackService
-from app.domain.contracts import FeedbackRequest, FeedbackResponse
+from app.application.services.feedback_service import FeedbackService, get_feedback_service
+from app.schemas.feedback import FeedbackRequest, FeedbackResponse
 
 router = APIRouter()
-FeedbackServiceDep = Annotated[FeedbackService, Depends(get_feedback_service)]
 
 
-@router.post("/feedback", response_model=FeedbackResponse)
-def register_feedback(
+@router.post("/feedback", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)
+def create_feedback(
     payload: FeedbackRequest,
-    service: FeedbackServiceDep,
+    service: FeedbackService = Depends(get_feedback_service),
 ) -> FeedbackResponse:
-    try:
-        return service.register(payload)
-    except KeyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Mensagem nao encontrada.",
-        ) from exc
+    return service.register(payload)

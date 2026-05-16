@@ -1,17 +1,23 @@
-.env
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
 .venv/
 venv/
-__pycache__/
-.pytest_cache/
-.ruff_cache/
-.coverage
-htmlcov/
+.env
+
+# Node
+node_modules/
 dist/
 build/
-node_modules/
+.vite/
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
 .DS_Store
+
+# Logs
 *.log
-*.sqlite3
-coverage/
-frontend/.vite/
 

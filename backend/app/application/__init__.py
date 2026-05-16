@@ -1,2 +1,1 @@
-"""Application use cases."""
-
+"""Casos de uso e orquestração da aplicação."""

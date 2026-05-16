@@ -1,37 +1,57 @@
 # Setup local
 
+## Requisitos
+
+- Python 3.12+
+- Node.js 22+
+- Docker Desktop
+
 ## Backend
 
-```powershell
+```bash
 cd backend
-python -m venv .venv
-.\.venv\Scripts\python -m pip install -e ".[dev]"
-.\.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
+
+API: `http://localhost:8000`
+
+Swagger: `http://localhost:8000/docs`
 
 ## Frontend
 
-```powershell
+```bash
 cd frontend
 npm install
-$env:VITE_API_URL = "http://localhost:8000"
 npm run dev
 ```
 
-## Infraestrutura local
+Web: `http://localhost:5173`
 
-```powershell
-docker compose up -d mysql qdrant
+## Ambiente completo com Docker
+
+```bash
+docker compose up --build
 ```
 
-## Validacao
+Servicos:
 
-```powershell
-cd backend
-.\.venv\Scripts\python -m pytest tests
-.\.venv\Scripts\python -m ruff check .
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:5173`
+- MySQL: `localhost:3306`
+- Qdrant: `http://localhost:6333`
 
-cd ..\frontend
-npm run build
+## Fluxo inicial validado
+
+```text
+Web Chat
+-> POST /ask
+-> busca local na base docs/knowledge_base
+-> resposta com fonte ou fallback
+-> historico em memoria
+-> feedback em memoria
+-> cadastro manual de documentos pela tela Documentos
+-> reindexacao simulada pela API
 ```
 
+Persistencia real em MySQL e indexacao real no Qdrant ficam como proxima fatia de implementacao.

@@ -1,2 +1,0 @@
-"""Simulated MCP tools."""
-

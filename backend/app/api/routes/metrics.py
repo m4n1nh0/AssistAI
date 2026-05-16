@@ -1,17 +1,13 @@
-from typing import Annotated
-
 from fastapi import APIRouter, Depends
 
-from app.api.dependencies import get_metrics_service
-from app.application.services.metrics_service import MetricsService
-from app.domain.contracts import MetricSummaryResponse
+from app.application.services.metrics_service import MetricsService, get_metrics_service
+from app.schemas.metrics import MetricsResponse
 
 router = APIRouter()
-MetricsServiceDep = Annotated[MetricsService, Depends(get_metrics_service)]
 
 
-@router.get("/metrics", response_model=MetricSummaryResponse)
-def metrics(
-    service: MetricsServiceDep,
-) -> MetricSummaryResponse:
-    return service.summary()
+@router.get("/metrics", response_model=MetricsResponse)
+def get_metrics(
+    service: MetricsService = Depends(get_metrics_service),
+) -> MetricsResponse:
+    return service.get_summary()

@@ -1,2 +1,1 @@
-"""Application services."""
-
+"""Serviços de aplicação."""

@@ -1,2 +1,1 @@
-"""Domain models, contracts and enums."""
-
+"""Modelos de domínio e contratos internos."""

@@ -1,2 +1,1 @@
-"""AssistAI backend package."""
-
+"""Backend do Assistente de Atendimento Inteligente."""
