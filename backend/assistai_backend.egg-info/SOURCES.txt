@@ -6,6 +6,7 @@ app/api/dependencies.py
 app/api/router.py
 app/api/routes/__init__.py
 app/api/routes/ask.py
+app/api/routes/assistant.py
 app/api/routes/attendances.py
 app/api/routes/documents.py
 app/api/routes/feedback.py
@@ -27,6 +28,10 @@ app/domain/contracts.py
 app/domain/enums.py
 app/domain/models.py
 app/infrastructure/__init__.py
+app/infrastructure/database/__init__.py
+app/infrastructure/database/mysql.py
+app/infrastructure/graph/__init__.py
+app/infrastructure/graph/assistant_graph.py
 app/infrastructure/llm/__init__.py
 app/infrastructure/llm/fake_llm.py
 app/infrastructure/mcp/__init__.py
@@ -37,9 +42,13 @@ app/infrastructure/repositories/__init__.py
 app/infrastructure/repositories/memory.py
 app/infrastructure/telegram/__init__.py
 app/infrastructure/telegram/client.py
+app/infrastructure/vector/__init__.py
+app/infrastructure/vector/qdrant.py
+app/schemas/assistant.py
 assistai_backend.egg-info/PKG-INFO
 assistai_backend.egg-info/SOURCES.txt
 assistai_backend.egg-info/dependency_links.txt
 assistai_backend.egg-info/requires.txt
 assistai_backend.egg-info/top_level.txt
 tests/test_api_contracts.py
+tests/test_assistant_contract.py
