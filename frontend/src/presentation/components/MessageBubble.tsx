@@ -1,3 +1,5 @@
+import ReactMarkdown from "react-markdown";
+
 import type { ChatMessage } from "../../domain/contracts";
 import { FeedbackButtons } from "./FeedbackButtons";
 
@@ -11,7 +13,11 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
 
   return (
     <article className={isAssistant ? "message assistant" : "message user"}>
-      <p>{message.content}</p>
+      {isAssistant ? (
+        <ReactMarkdown>{message.content}</ReactMarkdown>
+      ) : (
+        <p>{message.content}</p>
+      )}
       {message.sources && message.sources.length > 0 && (
         <div className="source-list">
           {message.sources.map((source) => (
@@ -27,4 +33,3 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
     </article>
   );
 }
-
