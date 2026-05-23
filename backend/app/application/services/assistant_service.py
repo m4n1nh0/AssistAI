@@ -5,7 +5,7 @@ from app.core.config import Settings
 from app.domain.contracts import AskRequest, AskResponse, SourceResponse
 from app.domain.enums import Intent
 from app.domain.models import AiLog, MessageRecord, Source, new_id
-from app.infrastructure.llm.fake_llm import FakeLLMGateway
+from app.infrastructure.llm.langgraph_llm import LangChainLLMGateway
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
 from app.infrastructure.rag.simple_retriever import RetrievalResult, SimpleRetriever
 from app.infrastructure.repositories.memory import InMemoryRepository
@@ -16,7 +16,7 @@ class AssistantService:
         self,
         repository: InMemoryRepository,
         retriever,
-        llm_gateway: FakeLLMGateway,
+        llm_gateway: LangChainLLMGateway,
         tools: SimulatedToolRegistry,
         settings: Settings,
     ) -> None:

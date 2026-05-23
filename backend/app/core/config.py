@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     qdrant_collection: str = "assistai_knowledge"
     llm_provider: str = "mock"
     llm_api_key: str | None = None
+    llm_model: str = "llama-3.1-8b-instant"
     telegram_bot_token: str | None = None
-    min_relevance_score: float = 0.15
+    min_relevance_score: float = 0.87
     max_message_chars: int = 2000
     mcp_simulated_enabled: bool = True
     cors_origins: list[str] = [

@@ -9,11 +9,12 @@ from app.application.services.metrics_service import MetricsService
 from app.application.services.telegram_service import TelegramService
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.infrastructure.llm.fake_llm import FakeLLMGateway
+from app.infrastructure.llm.langgraph_llm import LangChainLLMGateway
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
 from app.infrastructure.vector.qdrant import QdrantConfig, QdrantVectorStore
-from app.infrastructure.repositories.memory import InMemoryRepository
 
+from app.infrastructure.database.database import engine
+from app.infrastructure.database.models import Base
 
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -33,27 +34,24 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    repository = InMemoryRepository()
-    repository.seed_default_documents()
+    # Initialize SQL database tables
+    Base.metadata.create_all(bind=engine)
 
     config = QdrantConfig(url=settings.qdrant_url, collection=settings.qdrant_collection)
     retriever = QdrantVectorStore(config)
     
-    llm_gateway = FakeLLMGateway()
+    llm_gateway = LangChainLLMGateway(
+        provider=settings.llm_provider,
+        model_name=settings.llm_model,
+        api_key=settings.llm_api_key,
+    )
     tools = SimulatedToolRegistry(enabled=settings.mcp_simulated_enabled)
 
-    app.state.repository = repository
-    app.state.document_service = DocumentService(repository)
-    app.state.assistant_service = AssistantService(
-        repository=repository,
-        retriever=retriever,
-        llm_gateway=llm_gateway,
-        tools=tools,
-        settings=settings,
-    )
-    app.state.feedback_service = FeedbackService(repository)
-    app.state.metrics_service = MetricsService(repository)
-    app.state.telegram_service = TelegramService(app.state.assistant_service)
+    # Mount stateless singletons strictly in app state
+    app.state.settings = settings
+    app.state.retriever = retriever
+    app.state.llm_gateway = llm_gateway
+    app.state.tools = tools
 
     app.include_router(api_router, prefix=settings.api_prefix)
     return app
