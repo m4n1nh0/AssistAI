@@ -23,6 +23,7 @@ class SourceResponse(BaseModel):
     document_id: str
     title: str
     chunk_id: str
+    version: str
     score: float
 
 

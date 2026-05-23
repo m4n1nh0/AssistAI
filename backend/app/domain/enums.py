@@ -4,6 +4,7 @@ from enum import StrEnum
 class Channel(StrEnum):
     WEB = "web"
     TELEGRAM = "telegram"
+    API = "api"
 
 
 class DocumentStatus(StrEnum):

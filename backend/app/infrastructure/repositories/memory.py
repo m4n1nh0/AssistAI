@@ -35,51 +35,7 @@ class InMemoryRepository:
         if self.documents:
             return
 
-        documents = [
-            DocumentCreateRequest(
-                title="Procedimento de abertura de chamado",
-                category="help-desk",
-                content=(
-                    "Para abrir um chamado, acesse o portal de suporte interno, "
-                    "escolha a categoria do problema, descreva o impacto e anexe "
-                    "evidencias quando existirem. Ao final, acompanhe pelo numero "
-                    "de protocolo gerado."
-                ),
-                tags=["chamado", "portal", "suporte"],
-            ),
-            DocumentCreateRequest(
-                title="Reset de senha",
-                category="acesso",
-                content=(
-                    "Para solicitar reset de senha, use a opcao de recuperacao no "
-                    "portal corporativo. Se nao conseguir concluir, abra um chamado "
-                    "na categoria acesso e informe seu identificador de usuario."
-                ),
-                tags=["senha", "acesso", "login"],
-            ),
-            DocumentCreateRequest(
-                title="Consulta de status de chamado",
-                category="help-desk",
-                content=(
-                    "O status de um chamado pode ser consultado pelo numero de "
-                    "protocolo no portal de suporte. Chamados em andamento mostram "
-                    "a ultima atualizacao registrada pela equipe responsavel."
-                ),
-                tags=["status", "chamado", "protocolo"],
-            ),
-            DocumentCreateRequest(
-                title="Atendimento humano e fallback",
-                category="governanca",
-                content=(
-                    "Quando o usuario solicitar atendimento humano ou quando nao "
-                    "houver base suficiente para resposta, o atendimento deve ser "
-                    "marcado para escalonamento."
-                ),
-                tags=["humano", "escalonamento", "fallback"],
-            ),
-        ]
-
-        for payload in documents:
+        for payload in default_document_payloads():
             self.create_document(payload)
 
     def find_or_create_user(self, external_id: str, channel: Channel) -> User:
@@ -93,11 +49,26 @@ class InMemoryRepository:
             self.users[key] = user
             return user
 
-    def create_attendance(self, user_id: str, channel: Channel) -> Attendance:
-        attendance = Attendance(id=new_id("att"), user_id=user_id, channel=channel)
+    def find_or_create_attendance(
+        self,
+        user_id: str,
+        channel: Channel,
+        attendance_id: str | None = None,
+    ) -> Attendance:
+        if attendance_id and attendance_id in self.attendances:
+            return self.attendances[attendance_id]
+
+        attendance = Attendance(
+            id=attendance_id or new_id("att"),
+            user_id=user_id,
+            channel=channel,
+        )
         with self._lock:
             self.attendances[attendance.id] = attendance
         return attendance
+
+    def create_attendance(self, user_id: str, channel: Channel) -> Attendance:
+        return self.find_or_create_attendance(user_id, channel)
 
     def mark_attendance_escalated(self, attendance_id: str, reason: str) -> Handoff:
         with self._lock:
@@ -263,4 +234,50 @@ def _chunk_text(text: str, max_words: int = 120) -> list[str]:
     return [
         " ".join(words[index : index + max_words])
         for index in range(0, len(words), max_words)
+    ]
+
+
+def default_document_payloads() -> list[DocumentCreateRequest]:
+    return [
+        DocumentCreateRequest(
+            title="Procedimento de abertura de chamado",
+            category="help-desk",
+            content=(
+                "Para abrir um chamado, acesse o portal de suporte interno, "
+                "escolha a categoria do problema, descreva o impacto e anexe "
+                "evidencias quando existirem. Ao final, acompanhe pelo numero "
+                "de protocolo gerado."
+            ),
+            tags=["chamado", "portal", "suporte"],
+        ),
+        DocumentCreateRequest(
+            title="Reset de senha",
+            category="acesso",
+            content=(
+                "Para solicitar reset de senha, use a opcao de recuperacao no "
+                "portal corporativo. Se nao conseguir concluir, abra um chamado "
+                "na categoria acesso e informe seu identificador de usuario."
+            ),
+            tags=["senha", "acesso", "login"],
+        ),
+        DocumentCreateRequest(
+            title="Consulta de status de chamado",
+            category="help-desk",
+            content=(
+                "O status de um chamado pode ser consultado pelo numero de "
+                "protocolo no portal de suporte. Chamados em andamento mostram "
+                "a ultima atualizacao registrada pela equipe responsavel."
+            ),
+            tags=["status", "chamado", "protocolo"],
+        ),
+        DocumentCreateRequest(
+            title="Atendimento humano e fallback",
+            category="governanca",
+            content=(
+                "Quando o usuario solicitar atendimento humano ou quando nao "
+                "houver base suficiente para resposta, o atendimento deve ser "
+                "marcado para escalonamento."
+            ),
+            tags=["humano", "escalonamento", "fallback"],
+        ),
     ]

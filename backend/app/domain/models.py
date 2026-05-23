@@ -16,6 +16,7 @@ def utc_now() -> datetime:
 @dataclass(slots=True)
 class Source:
     document_id: str
+    chunk_id: str
     title: str
     version: str
     score: float

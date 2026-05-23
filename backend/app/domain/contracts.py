@@ -7,6 +7,7 @@ from app.domain.enums import Channel, DocumentStatus, Intent
 
 class SourceResponse(BaseModel):
     document_id: str
+    chunk_id: str
     title: str
     version: str
     score: float
@@ -16,6 +17,7 @@ class AskRequest(BaseModel):
     user_id: str = Field(..., min_length=1, max_length=128)
     channel: Channel = Channel.WEB
     message: str = Field(..., min_length=1, max_length=2000)
+    conversation_id: str | None = Field(default=None, max_length=128)
 
 
 class AskResponse(BaseModel):

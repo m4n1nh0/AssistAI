@@ -5,7 +5,8 @@ from app.core.config import Settings
 from app.domain.contracts import AskRequest, AskResponse, SourceResponse
 from app.domain.enums import Intent
 from app.domain.models import AiLog, MessageRecord, Source, new_id
-from app.infrastructure.llm.fake_llm import FakeLLMGateway
+from app.infrastructure.llm.gateway import LLMGateway
+from app.infrastructure.llm.prompt import FALLBACK_ANSWER
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
 from app.infrastructure.rag.simple_retriever import RetrievalResult, SimpleRetriever
 from app.infrastructure.repositories.memory import InMemoryRepository
@@ -16,7 +17,7 @@ class AssistantService:
         self,
         repository: InMemoryRepository,
         retriever: SimpleRetriever,
-        llm_gateway: FakeLLMGateway,
+        llm_gateway: LLMGateway,
         tools: SimulatedToolRegistry,
         settings: Settings,
     ) -> None:
@@ -32,7 +33,11 @@ class AssistantService:
         intent = _classify_intent(message)
 
         user = self.repository.find_or_create_user(request.user_id, request.channel)
-        attendance = self.repository.create_attendance(user.id, request.channel)
+        attendance = self.repository.find_or_create_attendance(
+            user.id,
+            request.channel,
+            request.conversation_id,
+        )
 
         contexts = self.retriever.search(message)
         contexts = [
@@ -56,14 +61,8 @@ class AssistantService:
                 attendance.id,
                 reason="Usuario solicitou atendimento humano.",
             )
-        elif intent == Intent.TICKET_STATUS:
-            answer, confidence = self._answer_ticket_status(message)
-            fallback = False
         elif fallback:
-            answer = (
-                "Nao encontrei base suficiente para responder com seguranca. "
-                "Posso encaminhar este atendimento para um humano."
-            )
+            answer = FALLBACK_ANSWER
             self.repository.mark_attendance_escalated(
                 attendance.id,
                 reason="Contexto insuficiente para resposta.",
@@ -105,6 +104,7 @@ class AssistantService:
             sources=[
                 SourceResponse(
                     document_id=source.document_id,
+                    chunk_id=source.chunk_id,
                     title=source.title,
                     version=source.version,
                     score=source.score,
@@ -114,24 +114,6 @@ class AssistantService:
             attendance_id=attendance.id,
             message_id=message_record.id,
         )
-
-    def _answer_ticket_status(self, message: str) -> tuple[str, float]:
-        ticket_id = _extract_ticket_id(message)
-        if not ticket_id:
-            return (
-                "Informe o numero do chamado no formato CHM-12345 para consulta.",
-                0.75,
-            )
-
-        result = self.tools.ticket_status(ticket_id)
-        output = result.output_payload
-        answer = (
-            f"O chamado {output.get('ticket_id', ticket_id)} esta "
-            f"{output.get('status', 'indisponivel')}. "
-            f"Ultima atualizacao: {output.get('last_update', 'sem registro')}."
-        )
-        return answer, 0.9 if result.success else 0.3
-
 
 def _sanitize(message: str, max_chars: int) -> str:
     compact = " ".join(message.strip().split())
@@ -149,11 +131,6 @@ def _classify_intent(message: str) -> Intent:
     return Intent.PROCEDURE
 
 
-def _extract_ticket_id(message: str) -> str | None:
-    match = re.search(r"\b(CHM-\d+)\b", message, flags=re.IGNORECASE)
-    return match.group(1).upper() if match else None
-
-
 def _to_sources(
     contexts: list[RetrievalResult],
     repository: InMemoryRepository,
@@ -166,6 +143,7 @@ def _to_sources(
         sources.append(
             Source(
                 document_id=document.id,
+                chunk_id=context.chunk.id,
                 title=document.title,
                 version=document.version,
                 score=context.score,

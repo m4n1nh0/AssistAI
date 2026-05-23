@@ -63,6 +63,7 @@ def get_attendance(
                 sources=[
                     SourceResponse(
                         document_id=source.document_id,
+                        chunk_id=source.chunk_id,
                         title=source.title,
                         version=source.version,
                         score=source.score,
