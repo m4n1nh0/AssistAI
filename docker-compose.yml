@@ -35,7 +35,9 @@ services:
       - .env.example
     environment:
       ASSISTAI_MYSQL_URL: mysql+pymysql://assistai:assistai@mysql:3306/assistai
+      ASSISTAI_PERSISTENCE_BACKEND: mysql
       ASSISTAI_QDRANT_URL: http://qdrant:6333
+      ASSISTAI_RETRIEVAL_BACKEND: qdrant
     ports:
       - "8000:8000"
     depends_on:
