@@ -55,6 +55,19 @@ Se o Node falhar com `Exec format error` ou outros erros de binário, o ambiente
 docker compose up -d mysql qdrant
 ```
 
+## Perfis do MVP Web
+
+O perfil padrao (`.env.example`) usa `memory`, `simple` e `mock`: permite executar o chat e os testes sem dependencias externas, mantendo prompt, fallback, fontes e feedback ativos.
+
+Para executar com persistencia MySQL e recuperacao no Qdrant local:
+
+```powershell
+$env:ASSISTAI_PERSISTENCE_BACKEND = "mysql"
+$env:ASSISTAI_RETRIEVAL_BACKEND = "qdrant"
+```
+
+O `docker compose up` ja configura essas duas opcoes no container do backend. Para usar um LLM compativel com a API OpenAI, configure `ASSISTAI_LLM_PROVIDER=openai`, `ASSISTAI_LLM_API_KEY`, `ASSISTAI_LLM_MODEL` e, se necessario, `ASSISTAI_LLM_BASE_URL`.
+
 ## Validacao
 
 ### Backend

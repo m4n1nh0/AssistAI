@@ -250,7 +250,7 @@ Resultado esperado:
 
 ## Observação sobre fontes
 
-Na task S1-01, o campo `sources` pode retornar vazio:
+Quando nao houver contexto acima do score minimo, o campo `sources` retorna vazio:
 
 ```json
 {
@@ -258,7 +258,7 @@ Na task S1-01, o campo `sources` pode retornar vazio:
 }
 ```
 
-Quando o RAG for integrado, o formato esperado será:
+Quando houver resposta fundamentada, cada fonte identifica documento, versao e chunk:
 
 ```json
 {
@@ -267,6 +267,7 @@ Quando o RAG for integrado, o formato esperado será:
       "document_id": "doc_001",
       "title": "Manual de Suporte",
       "chunk_id": "chunk_001",
+      "version": "1.0",
       "score": 0.87
     }
   ]
@@ -277,9 +278,21 @@ Quando o RAG for integrado, o formato esperado será:
 
 ## Observação sobre feedback
 
-O `message_id` retornado pelo `/ask` será usado futuramente para vincular feedback à resposta gerada.
+O `message_id` retornado pelo `/ask` e usado para vincular feedback à resposta gerada:
 
-Na S1-01, o endpoint pode retornar um `message_id` mockado apenas para validar o contrato. A persistência real do histórico e do feedback será tratada nas próximas tarefas.
+```http
+POST /feedback
+```
+
+```json
+{
+  "message_id": "msg_789",
+  "useful": true,
+  "comment": "Resolveu minha duvida."
+}
+```
+
+Na Semana 2, a pergunta, resposta, score, fontes e feedback sao persistidos no repositorio configurado.
 
 ---
 
