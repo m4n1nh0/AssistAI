@@ -95,6 +95,8 @@ export interface AskResponse {
   fallback_reason?: FallbackReason; // Razão do fallback
   conversation_id?: string; // ID da conversa para continuidade
   request_id?: string; // ID do request original (para rastreamento)
+  attendance_id?: string; // ID do atendimento registrado
+  message_id?: string; // ID da mensagem registrada para feedback
   metadata: ResponseMetadata; // Metadados da resposta
 }
 
@@ -196,10 +198,19 @@ export interface DocumentResponse {
   document_id: string;
   title: string;
   category: string;
+  channel: string;
   version: string;
   status: DocumentStatus;
-  created_at: string;
   updated_at: string;
+  source: string;
+  owner: string;
+  sensitivity: string;
+  tags: string[];
+}
+
+export interface ReindexResponse {
+  indexed_documents: number;
+  indexed_chunks: number;
 }
 
 // ============================================================================

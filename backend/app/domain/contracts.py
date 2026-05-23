@@ -146,7 +146,7 @@ class AskResponse(BaseModel):
         default=CONTRACT_VERSION, description="Versão do contrato"
     )
     answer: str = Field(
-        ..., max_length=4000, description="Resposta gerada pelo assistente"
+        ..., min_length=1, max_length=4000, description="Resposta gerada pelo assistente"
     )
     sources: list[SourceResponse] = Field(
         default_factory=list,
@@ -171,6 +171,12 @@ class AskResponse(BaseModel):
     )
     request_id: Optional[str] = Field(
         default=None, description="ID do request original (para rastreamento)"
+    )
+    attendance_id: Optional[str] = Field(
+        default=None, description="ID do atendimento registrado"
+    )
+    message_id: Optional[str] = Field(
+        default=None, description="ID da mensagem registrada para feedback e histórico"
     )
     metadata: ResponseMetadata = Field(
         ..., description="Metadados da resposta"
@@ -328,10 +334,21 @@ class DocumentResponse(BaseModel):
     document_id: str = Field(..., description="ID único do documento")
     title: str = Field(..., description="Título do documento")
     category: str = Field(..., description="Categoria")
+    channel: str = Field(..., description="Canal alvo do documento")
     version: str = Field(..., description="Versão")
     status: DocumentStatus = Field(..., description="Status")
-    created_at: datetime = Field(..., description="Data de criação")
     updated_at: datetime = Field(..., description="Data de atualização")
+    source: str = Field(..., description="Fonte do documento")
+    owner: str = Field(..., description="Responsável pelo documento")
+    sensitivity: str = Field(..., description="Nível de sensibilidade")
+    tags: list[str] = Field(default_factory=list, description="Tags para categorização")
+
+
+class ReindexResponse(BaseModel):
+    """Resumo da reindexação manual da base de conhecimento."""
+
+    indexed_documents: int = Field(..., ge=0, description="Total de documentos reindexados")
+    indexed_chunks: int = Field(..., ge=0, description="Total de chunks gerados")
 
 
 # ============================================================================

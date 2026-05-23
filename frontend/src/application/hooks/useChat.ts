@@ -10,7 +10,8 @@ export function useChat() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Ola. Posso ajudar com abertura de chamado, reset de senha ou status de atendimento."
+      content: "Ola. Posso ajudar com abertura de chamado, reset de senha ou status de atendimento.",
+      timestamp: new Date().toISOString(),
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +26,8 @@ export function useChat() {
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: trimmed
+      content: trimmed,
+      timestamp: new Date().toISOString(),
     };
 
     setMessages((current) => [...current, userMessage]);
@@ -37,7 +39,7 @@ export function useChat() {
         version: "1.0",
         question: trimmed,
         user_id: USER_ID,
-        channel: "web",
+        channel: "web" as const,
         metadata: {
           timestamp: new Date().toISOString(),
           user_agent: navigator.userAgent,
@@ -45,7 +47,7 @@ export function useChat() {
       };
 
       const response = await apiClient.ask(request);
-      const assistantId = response.request_id ?? crypto.randomUUID();
+      const assistantId = response.message_id ?? response.request_id ?? crypto.randomUUID();
 
       setMessages((current) => [
         ...current,
@@ -55,7 +57,7 @@ export function useChat() {
           content: response.answer,
           fallback: response.fallback,
           sources: response.sources,
-          messageId: assistantId,
+          messageId: response.message_id,
           timestamp: new Date().toISOString(),
         }
       ]);

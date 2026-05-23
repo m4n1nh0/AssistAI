@@ -6,7 +6,7 @@ from app.core.config import Settings
 from app.domain.contracts import AskRequest, AskResponse, ResponseMetadata, SourceResponse
 from app.domain.enums import Intent
 from app.domain.models import AiLog, MessageRecord, Source, new_id
-from app.infrastructure.llm.fake_llm import FakeLLMGateway
+from app.infrastructure.llm.fake_llm import FALLBACK_ANSWER, FakeLLMGateway
 from app.infrastructure.mcp.simulated_tools import SimulatedToolRegistry
 from app.infrastructure.rag.simple_retriever import RetrievalResult, SimpleRetriever
 from app.infrastructure.repositories.memory import InMemoryRepository
@@ -35,20 +35,22 @@ class AssistantService:
         user = self.repository.find_or_create_user(request.user_id, request.channel)
         attendance = self.repository.create_attendance(user.id, request.channel)
 
-        contexts = self.retriever.search(message)
+        retrieved_contexts = self.retriever.search(message)
         contexts = [
             context
-            for context in contexts
+            for context in retrieved_contexts
             if context.score >= self.settings.min_relevance_score
         ]
 
         fallback = not contexts
+        fallback_reason = "low_score" if retrieved_contexts and not contexts else "no_sources"
         answer = ""
         confidence = contexts[0].score if contexts else 0.0
 
         if intent == Intent.HUMAN_REQUEST:
             fallback = True
-            confidence = 1.0
+            fallback_reason = "intent_out_of_scope"
+            confidence = 0.0
             answer = (
                 "Entendi que voce precisa de atendimento humano. "
                 "Marquei este atendimento para escalonamento."
@@ -60,11 +62,9 @@ class AssistantService:
         elif intent == Intent.TICKET_STATUS:
             answer, confidence = self._answer_ticket_status(message)
             fallback = False
+            fallback_reason = None
         elif fallback:
-            answer = (
-                "Nao encontrei base suficiente para responder com seguranca. "
-                "Posso encaminhar este atendimento para um humano."
-            )
+            answer = FALLBACK_ANSWER
             self.repository.mark_attendance_escalated(
                 attendance.id,
                 reason="Contexto insuficiente para resposta.",
@@ -99,13 +99,8 @@ class AssistantService:
         )
 
         model_used = "fallback" if fallback else (
-            "simulated_tool" if intent == Intent.TICKET_STATUS else "gpt-4"
+            "simulated_tool" if intent == Intent.TICKET_STATUS else "mock-llm-context-v1"
         )
-        fallback_reason = None
-        if intent == Intent.HUMAN_REQUEST:
-            fallback_reason = "intent_out_of_scope"
-        elif fallback:
-            fallback_reason = "no_sources"
 
         return AskResponse(
             answer=answer,
@@ -124,6 +119,8 @@ class AssistantService:
             fallback_reason=fallback_reason,
             conversation_id=request.conversation_id,
             request_id=request.request_id,
+            attendance_id=attendance.id,
+            message_id=message_record.id,
             metadata=ResponseMetadata(
                 processing_time_ms=elapsed_ms,
                 model_used=model_used,

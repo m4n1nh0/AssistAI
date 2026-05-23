@@ -2,7 +2,7 @@ import type {
   AskRequest,
   AskResponse,
   AttendanceListItem,
-  DocumentSummary,
+  DocumentResponse,
   FeedbackRequest,
   MetricSummary
 } from "../../domain/contracts";
@@ -42,7 +42,7 @@ export const apiClient = {
     return request<AttendanceListItem[]>("/attendances");
   },
   listDocuments() {
-    return request<DocumentSummary[]>("/documents");
+    return request<DocumentResponse[]>("/documents");
   },
   metrics() {
     return request<MetricSummary>("/metrics");

@@ -1,11 +1,11 @@
 import { RefreshCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import type { DocumentSummary } from "../../domain/contracts";
+import type { DocumentResponse } from "../../domain/contracts";
 import { apiClient } from "../../infrastructure/api/client";
 
 export function DocumentsPage() {
-  const [documents, setDocuments] = useState<DocumentSummary[]>([]);
+  const [documents, setDocuments] = useState<DocumentResponse[]>([]);
 
   async function load() {
     setDocuments(await apiClient.listDocuments());

@@ -1,4 +1,4 @@
-from app.domain.contracts import MetricSummaryResponse
+from app.domain.contracts import MetricSummary
 from app.infrastructure.repositories.memory import InMemoryRepository
 
 
@@ -6,6 +6,6 @@ class MetricsService:
     def __init__(self, repository: InMemoryRepository) -> None:
         self.repository = repository
 
-    def summary(self) -> MetricSummaryResponse:
-        return MetricSummaryResponse(**self.repository.metrics_snapshot())
+    def summary(self) -> MetricSummary:
+        return MetricSummary(**self.repository.metrics_snapshot())
 
