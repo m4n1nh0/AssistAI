@@ -6,6 +6,7 @@ import { apiClient } from "../../infrastructure/api/client";
 const USER_ID = "web-user-001";
 
 export function useChat() {
+  const [conversationId, setConversationId] = useState<string | undefined>();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -34,10 +35,13 @@ export function useChat() {
 
     try {
       const response = await apiClient.ask({
-        user_id: USER_ID,
+        question: trimmed,
         channel: "web",
-        message: trimmed
+        conversation_id: conversationId,
+        user: { id: USER_ID },
+        metadata: { source: "chat-web" }
       });
+      setConversationId(response.conversation_id);
 
       setMessages((current) => [
         ...current,
@@ -45,7 +49,7 @@ export function useChat() {
           id: response.message_id,
           role: "assistant",
           content: response.answer,
-          fallback: response.fallback,
+          fallback: response.status === "fallback",
           sources: response.sources,
           messageId: response.message_id
         }

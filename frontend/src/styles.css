@@ -153,6 +153,17 @@ input {
   color: #ffffff;
 }
 
+.fallback-label {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #fff2e2;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .source-list {
   display: flex;
   flex-wrap: wrap;
@@ -170,8 +181,20 @@ input {
 
 .feedback-actions {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-top: 10px;
+}
+
+.feedback-status,
+.feedback-error {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #0f777b;
+}
+
+.feedback-error {
+  color: #b42318;
 }
 
 .icon-button,
@@ -192,6 +215,11 @@ input {
 .composer button:hover {
   border-color: #20a4a9;
   color: #0f777b;
+}
+
+.icon-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
 }
 
 .composer {

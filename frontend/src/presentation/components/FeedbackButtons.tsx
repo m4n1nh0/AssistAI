@@ -8,10 +8,20 @@ interface FeedbackButtonsProps {
 
 export function FeedbackButtons({ messageId, onFeedback }: FeedbackButtonsProps) {
   const [selected, setSelected] = useState<"up" | "down" | null>(null);
+  const [sending, setSending] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   async function handleFeedback(useful: boolean) {
-    setSelected(useful ? "up" : "down");
-    await onFeedback(messageId, useful);
+    setSending(true);
+    setFailed(false);
+    try {
+      await onFeedback(messageId, useful);
+      setSelected(useful ? "up" : "down");
+    } catch {
+      setFailed(true);
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -20,6 +30,7 @@ export function FeedbackButtons({ messageId, onFeedback }: FeedbackButtonsProps)
         type="button"
         className={selected === "up" ? "icon-button selected" : "icon-button"}
         onClick={() => handleFeedback(true)}
+        disabled={sending}
         title="Resposta util"
       >
         <ThumbsUp size={16} />
@@ -28,10 +39,13 @@ export function FeedbackButtons({ messageId, onFeedback }: FeedbackButtonsProps)
         type="button"
         className={selected === "down" ? "icon-button selected" : "icon-button"}
         onClick={() => handleFeedback(false)}
+        disabled={sending}
         title="Resposta nao util"
       >
         <ThumbsDown size={16} />
       </button>
+      {selected && <span className="feedback-status">Feedback registrado.</span>}
+      {failed && <span className="feedback-error">Falha ao registrar feedback.</span>}
     </div>
   );
 }

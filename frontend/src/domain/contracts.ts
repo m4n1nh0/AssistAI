@@ -1,4 +1,4 @@
-export type Channel = "web" | "telegram";
+export type Channel = "web" | "telegram" | "api";
 
 export type Intent =
   | "saudacao"
@@ -11,24 +11,33 @@ export type Intent =
 export interface Source {
   document_id: string;
   title: string;
+  chunk_id: string;
   version: string;
   score: number;
 }
 
 export interface AskRequest {
-  user_id: string;
+  question: string;
   channel: Channel;
-  message: string;
+  conversation_id?: string;
+  user?: {
+    id?: string;
+    name?: string;
+  };
+  metadata?: Record<string, unknown>;
 }
 
 export interface AskResponse {
   answer: string;
-  fallback: boolean;
-  intent: Intent;
-  confidence: number;
+  status: "answered" | "fallback" | "error";
   sources: Source[];
-  attendance_id: string;
+  conversation_id: string;
   message_id: string;
+  metadata: {
+    confidence?: number;
+    fallback?: boolean;
+    channel?: Channel;
+  };
 }
 
 export interface FeedbackRequest {

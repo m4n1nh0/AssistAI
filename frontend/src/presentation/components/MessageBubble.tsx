@@ -12,10 +12,11 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
   return (
     <article className={isAssistant ? "message assistant" : "message user"}>
       <p>{message.content}</p>
+      {message.fallback && <span className="fallback-label">Sem contexto confiavel</span>}
       {message.sources && message.sources.length > 0 && (
         <div className="source-list">
           {message.sources.map((source) => (
-            <span key={source.document_id}>
+            <span key={source.chunk_id}>
               {source.title} v{source.version} ({Math.round(source.score * 100)}%)
             </span>
           ))}
