@@ -27,7 +27,8 @@ class SimpleRetriever:
         results: list[RetrievedContext] = []
 
         for document in self.documents:
-            if document.status != "active":
+            status = document.status.value if hasattr(document.status, "value") else document.status
+            if status != "active":
                 continue
             document_tokens = _tokens(" ".join([document.title, document.category, document.content, *document.tags]))
             if not query_tokens or not document_tokens:

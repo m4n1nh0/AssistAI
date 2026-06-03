@@ -170,7 +170,7 @@ class InMemoryRepository:
         active_ids = {
             document.id
             for document in self.documents.values()
-            if document.status == DocumentStatus.ACTIVE
+            if document.status == DocumentStatus.ACTIVE or document.status == DocumentStatus.ACTIVE.value
         }
         return [chunk for chunk in self.chunks.values() if chunk.document_id in active_ids]
 
@@ -249,7 +249,7 @@ class InMemoryRepository:
                     "title": document.title,
                     "category": document.category,
                     "version": document.version,
-                    "status": document.status.value,
+                    "status": document.status.value if hasattr(document.status, "value") else str(document.status),
                     "chunk_index": str(index),
                 },
             )
